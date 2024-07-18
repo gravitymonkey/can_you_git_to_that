@@ -1,14 +1,8 @@
 from openai import OpenAI
+import sqlite3
+import json
+from .llm_config import get_base_url, get_key
 
-def _get_base_url(ai_service):
-    if ai_service == "ollama":
-        return 'http://localhost:11434/v1'
-    return 'https://api.openai.com/v1'
-
-def _get_key(ai_service):
-    if ai_service == "ollama":
-        return 'ollama'
-    raise ValueError(f"Unknown AI service: {ai_service} - get key")
 
 def summarize_diff(filename, diff, file_sample, ai_service, ai_model):
     clause = "Unified Diff:"
@@ -32,8 +26,8 @@ def summarize_diff(filename, diff, file_sample, ai_service, ai_model):
     prompt = f"File: {filename}\n{clause}\n\n{data}\n"
     
     client = OpenAI(
-        base_url = _get_base_url(ai_service),
-        api_key= _get_key(ai_service),
+        base_url = get_base_url(ai_service),
+        api_key= get_key(ai_service),
     )
     response = client.chat.completions.create(
         model=ai_model,
@@ -59,8 +53,8 @@ def shorter_summarize_diff(filename, long_summary, ai_service, ai_model):
     prompt = f"File: {filename}\nJunior Developer Summary:\n\n{long_summary}\n"
 
     client = OpenAI(
-        base_url = _get_base_url(ai_service),
-        api_key= _get_key(ai_service),
+        base_url = get_base_url(ai_service),
+        api_key= get_key(ai_service),
     )
     response = client.chat.completions.create(
         model=ai_model,
@@ -110,8 +104,8 @@ def classify_description(tags, desc, ai_service, ai_model):
     prompt = f"Description: {desc}\n"
 
     client = OpenAI(
-        base_url = _get_base_url(ai_service),
-        api_key= _get_key(ai_service),
+        base_url = get_base_url(ai_service),
+        api_key= get_key(ai_service),
     )
     model = ai_model
     response = client.chat.completions.create(
@@ -123,3 +117,4 @@ def classify_description(tags, desc, ai_service, ai_model):
         temperature=0.2
     )
     return response.choices[0].message.content 
+

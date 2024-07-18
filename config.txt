@@ -1,12 +1,12 @@
 # the name of the repo
-repo_name	stochasticcodemonkeys
+repo_name	can_you_git_to_that
 
 # the name of the repo owner, typically found on github as
 # https://github.com/<REPO_OWNER>/<REPO_NAME>
 repo_owner	gravitymonkey
 
 # the local path to the repo
-repo_local_full_path	/Users/jasonuechi/dev/stochasticcodemonkeys
+repo_local_full_path	/Users/jasonuechi/dev/can_you_git_to_that
 
 # files we want to ignore in our analysis
 exclude_file_pattern	\.gem|\.lock|yarn|gemfile|__pycache__|\.py[cod]|\.pyo|\.pytest_cache|\.egg-info|node_modules|\.log|\.eslintcache|\.tsbuildinfo|dist|build
@@ -24,4 +24,7 @@ ai_description_max	800
 ai_description_model	ollama|mistral 
 
 # should we fill commit descriptions from log? useful if you re-run multiple times
-use_commit_desc_from_log	False
+use_commit_desc_from_log	True
+
+# ai engine and model for overview summary descriptions
+ai_summary_model	ollama|mistral
