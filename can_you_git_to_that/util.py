@@ -1,8 +1,11 @@
 import logging
 import os
+import datetime 
 from .export_git import get_commit_log, get_pr_data, create_csv
 from .import_to_db import fill_db
 from .annotate_commits import generate_descriptions, generate_tag_annotations, backfill_descriptions_from_log
+from .summarize_author_commit_count import get_author_commit_count, get_author_commit_count_summary
+from .llm_config import get_base_url, get_key
 
 def run(config):
 
@@ -22,8 +25,11 @@ def run(config):
     exclude_authors = config.get("exclude_authors", "")
     max_summary_length = int(config.get("ai_description_max", 800)) 
     ai_model = config.get("ai_description_model", "ollama|mistral")    
+    summary_ai_model = config.get("ai_summary_model", "ollama|mistral")
     use_commit_desc_from_log = config.get("use_commit_desc_from_log", "False")
-    
+
+    _log_master("last_started", repo_owner, repo_name, datetime.datetime.now().isoformat())
+
     git_log = get_commit_log(access_token, repo_owner, repo_name)
     logging.info("log output written to %s", git_log)
 
@@ -45,9 +51,18 @@ def run(config):
 
     logging.info("Generating commit diff descriptions")
     generate_descriptions(access_token, repo_owner, repo_name, max_summary_length, ai_model)
-    
+
     logging.info("generating annotations/tagging commits")
     generate_tag_annotations(repo_owner, repo_name, ai_model)
+
+    logging.info("generate LLM summary of primary data")
+    _generate_data_summary(repo_owner, repo_name, summary_ai_model)
+
+    _log_master("last_completed", repo_owner, repo_name, datetime.datetime.now().isoformat())
+
+def _log_master(key, repo_owner, repo_name, value):
+    with open("output/master_log.txt", "a", encoding="utf-8") as f:
+        f.write(f"{repo_owner}\t{repo_name}\t{key}\t{value}\n")
 
 
 def setup_logging(level=logging.INFO):
@@ -91,6 +106,7 @@ def read_config(filename=None):
         "tags",
         "ai_description_max",
         "ai_description_model",
+        "ai_summary_model",
     ]
 
     for line in lines:
@@ -129,4 +145,13 @@ def _read_github_key(config):
         logging.error("GitHub access token not found in environment variables")
         logging.error("SET an environment variable CYGTT_GITHUB_ACCESS_TOKEN with your GitHub access token")   
         raise ValueError("No GitHub access token found - Check docs for more information")
+
+
+def _generate_data_summary(repo_owner, repo_name, ai_model):
+    ai_service = ai_model.split("|")[0]
+    model = ai_model.split("|")[1]
+
+    author_data = get_author_commit_count(repo_owner, repo_name)
+    author_data_summary = get_author_commit_count_summary(author_data, ai_service, model)
+    print(author_data_summary)
 
