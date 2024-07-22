@@ -51,8 +51,8 @@ document.addEventListener("DOMContentLoaded", function() {
         return data;
     }
 
-    async function fetchPullRequestsOverTimeData() {
-        url = '/pull-requests-over-time?repo_parent=' + repoParent + '&repo_name=' + repoName        
+    async function fetchPullRequests() {
+        url = '/pull-requests-recent?repo_parent=' + repoParent + '&repo_name=' + repoName        
         if (startAt) {
             url = url + '&startAt=' + startAt;
         }
@@ -121,14 +121,20 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    function createFileChangesOverTimeChart(data) {
+    function createFileChangesOverTimeChart(idata) {
+        timescale = idata.type
+        display_timescale = "day"
+        if (timescale == 'Week'){
+            display_timescale = "week"
+        }
+        data = idata.data        
         const ctx = document.getElementById('commits-over-time-chart').getContext('2d');
         new Chart(ctx, {
             type: 'line',
             data: {
                 labels: data.map(row => row.date),
                 datasets: [{
-                    label: 'Commits by Week',
+                    label: 'Commits by ' + timescale,
                     data: data.map(row => ({x: row.date, y: row.commits})),
                     backgroundColor: 'rgba(23, 38, 38, 0.5)',
                     borderColor: 'rgba(23, 38, 38, 1)',
@@ -145,14 +151,18 @@ document.addEventListener("DOMContentLoaded", function() {
                     x: {
                         type: 'time', // Use 'time' instead of 'timeseries'
                         time: {
-                            unit: 'week', // Adjust the unit as needed (e.g., 'day', 'week', 'month', 'year')                            
-                            tooltipFormat: 'YYYY/MM/DD' // Format for the tooltip
+                            unit: display_timescale, // Adjust the unit as needed (e.g., 'day', 'week', 'month', 'year')                            
+                            tooltipFormat: 'YYYY/MM/DD', // Format for the tooltip
+                            displayFormats: {
+                                day: 'MM/DD', // Adjust this format as needed to match your timescale unit
+                                week: 'YYYY/MM/DD'
+                             }
                         },
                         title: {
                             display: true
                         },
                         min: 'auto',
-                        offset: 'false'   
+                        offset: false   
                     }
                 }
             }
@@ -419,72 +429,36 @@ function createTagsFrequencyChart(data) {
         return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
     }
 
-    function createPullRequestsOverTimeChart(data, startAt) {
-        const ctx = document.getElementById('pull-requests-over-time-chart').getContext('2d');
-        const userColors = {};
+    function createPullRequestsChart(data, startAt) {
+        const tableBody = document.getElementById('pull-requests-recent');
+        tableBody.innerHTML = ''; // Clear existing rows
 
-        // Assign a random color to each user
         data.forEach(row => {
-            if (!userColors[row.user]) {
-                userColors[row.user] = getRandomColor();
-            }
-        });
+            const tr = document.createElement('tr');
+            const tdDate = document.createElement('td');
+            const tdTitle = document.createElement('td');
+            const tdUser = document.createElement('td');
+            const tdFileCount = document.createElement('td');
+            const tdDescription = document.createElement('td');
 
-        new Chart(ctx, {
-            type: 'bubble',
-            data: {
-                datasets: data.map(row => ({
-                    label: row.pr_title,
-                    data: [{
-                        x: new Date(row.date),
-                        y: row.file_count,
-                        r: row.file_count, // Use file_count for the bubble radius
-                        author: row.user
-                    }],
-                    backgroundColor: userColors[row.user] + '80', // Add transparency
-                    borderColor: userColors[row.user],
-                    borderWidth: 1
-                }))
-            },
-            options: {
-                scales: {
-                    x: {
-                        type: 'time',
-                        time: {
-                            unit: 'week',
-                            tooltipFormat: 'YYYY-MM-DD'
-                        },
-                        title: {
-                            display: true,
-                            text: 'Date'
-                        },
-                        min: new Date(startAt),
-                    },
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Number of Commits'
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false // Hide the legend
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                console.log(context);
-                                const label = context.dataset.label || '';
-                                const date = context.raw.x.toISOString().split('T')[0];
-                                const commits = context.raw.y;
-                                const author = context.raw.author;
-                                return `Title: ${label}; Date: ${date}; # Files: ${commits}; Author: ${author}`;
-                            }                        }
-                    }
-                }
-            }
+            tdDate.textContent = row.date;
+            tdDate.classList.add('px-4', 'py-2', 'border');
+            title_link = row.pr_title + " <A HREF='" + row.pr_url + "'>&#128279</A>"
+            tdTitle.innerHTML = title_link;
+            tdTitle.classList.add('px-4', 'py-2', 'border');
+            tdUser.textContent = row.user;
+            tdUser.classList.add('px-4', 'py-2', 'border');
+            tdFileCount.textContent = row.file_count;
+            tdFileCount.classList.add('px-4', 'py-2', 'border');
+            tdDescription.innerHTML = row.description;
+            tdDescription.classList.add('px-4', 'py-2', 'border', 'overflow-hidden', 'max-h-3');
+
+            tr.appendChild(tdDate);
+            tr.appendChild(tdTitle);
+            tr.appendChild(tdUser);
+            tr.appendChild(tdFileCount);
+            tr.appendChild(tdDescription);
+            tableBody.appendChild(tr);
         });
     }
 
@@ -560,8 +534,8 @@ function createTagsFrequencyChart(data) {
 //        createCommitsByTagWeekChart(data);
 //    });    
 
-    fetchPullRequestsOverTimeData().then(data => {
-        createPullRequestsOverTimeChart(data, startAt);
+    fetchPullRequests().then(data => {
+        createPullRequestsChart(data, startAt);
     });
 
     fetchIcicleData().then(data => {

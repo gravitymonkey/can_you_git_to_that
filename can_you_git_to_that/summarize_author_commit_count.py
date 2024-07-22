@@ -51,8 +51,14 @@ def get_author_commit_count_summary(data, service_name, model_name):
         committed code to the repo, along with the total number of
         commits, over the repo's history, and the first and last
         date of their commit history, which informs you about their
-        time and tenure of their contributions.  Describe the data in a 
-        manner that is useful for a non-technical stakeholder.
+        time and tenure of their contributions.  If there are many
+        authors, you may want to compare and contrast the their contributions
+        over time -- if there is only one, then there is only a single
+        contributor to this repo.  
+        
+        Describe the data in a manner that is useful for a 
+        non-technical stakeholder to understand the code, repo and the team.
+
         Avoid technical jargon, and focus on the high level implications.
         Avoid judgement about individual developer quality or performance.
         Observe trends and changes in the data, but do not make predictions.

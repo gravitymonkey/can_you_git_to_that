@@ -5,7 +5,7 @@ import os
 import hashlib
 from datetime import datetime
 from github import Github
-from .llm import summarize_diff, shorter_summarize_diff, classify_description
+from .llm import summarize_diff, shorter_summarize_diff, classify_description, summarize_pr
 
 def generate_descriptions(access_token, repo_owner, repo_name, max_length, ai_model):
     conn = sqlite3.connect(f'output/{repo_owner}-{repo_name}.db')
@@ -199,6 +199,69 @@ def _is_code_file(path):
     if filename.startswith("."):
         return False
     return True
+
+def generate_pr_descriptions(repo_owner, repo_name, max_length, ai_info):
+    conn = sqlite3.connect(f'output/{repo_owner}-{repo_name}.db')
+    cursor = conn.cursor()
+    
+    query = """
+        SELECT 
+            DISTINCT pr.merge_commit_sha,
+            pr.number as pr_number
+        FROM 
+            pull_requests pr
+        WHERE 
+            pr.description IS NULL
+        ORDER BY 
+            pr.id ASC;
+    """
+    prs = {}
+    cursor.execute(query)
+    rows = cursor.fetchall()
+    print(rows)
+    for row in rows:
+        commit_hash = row[0]
+        pr_id = row[1]
+        data = []
+        commit_query = """
+            SELECT 
+                filename, description
+            FROM
+                commits
+            WHERE
+                commit_hash = ?                
+        """
+        cursor.execute(commit_query, (commit_hash,))
+        commit_rows = cursor.fetchall()
+        for commit_row in commit_rows:
+            if commit_row[1] is not None:
+                data.append(commit_row[1])
+        prs[pr_id] = data    
+    conn.close()
+    ai_service = ai_info.split("|")[0]
+    ai_model = ai_info.split("|")[1]
+    for pr_id in prs:
+        description_text = "\n--\n".join(prs[pr_id])
+        summary = summarize_pr(description_text, ai_service, ai_model)
+        logging.info("Summary for PR %s: %s", pr_id, summary)
+        _write_pr_summary_to_db(repo_owner, repo_name, pr_id, summary)
+
+def _write_pr_summary_to_db(repo_owner, repo_name, pr_id, summary):
+    try:
+        conn = sqlite3.connect(f'output/{repo_owner}-{repo_name}.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+                UPDATE pull_requests
+                SET description = ?
+                WHERE number = ?
+        ''', (summary, pr_id))
+        conn.commit()   
+        conn.close()
+    except Exception as e:
+        logging.error("Error writing PR summary to DB: %s", e)
+        raise e
+
+
 
 
 def generate_tag_annotations(repo_owner, repo_name, ai_string):

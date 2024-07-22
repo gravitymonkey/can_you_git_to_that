@@ -3,7 +3,7 @@ import os
 import datetime 
 from .export_git import get_commit_log, get_pr_data, create_csv
 from .import_to_db import fill_db
-from .annotate_commits import generate_descriptions, generate_tag_annotations, backfill_descriptions_from_log
+from .annotate_commits import generate_descriptions, generate_pr_descriptions, generate_tag_annotations, backfill_descriptions_from_log
 from .summarize_author_commit_count import get_author_commit_count, get_author_commit_count_summary
 from .llm_config import get_base_url, get_key
 
@@ -52,10 +52,14 @@ def run(config):
     logging.info("Generating commit diff descriptions")
     generate_descriptions(access_token, repo_owner, repo_name, max_summary_length, ai_model)
 
+
+    logging.info("Generating pull request descriptions from commit descriptions")
+    generate_pr_descriptions(repo_owner, repo_name, max_summary_length, summary_ai_model)
+
     logging.info("generating annotations/tagging commits")
     generate_tag_annotations(repo_owner, repo_name, ai_model)
 
-    logging.info("generate LLM summary of primary data")
+    logging.info("generate LLM summary core data")
     _generate_data_summary(repo_owner, repo_name, summary_ai_model)
 
     _log_master("last_completed", repo_owner, repo_name, datetime.datetime.now().isoformat())
@@ -63,7 +67,6 @@ def run(config):
 def _log_master(key, repo_owner, repo_name, value):
     with open("output/master_log.txt", "a", encoding="utf-8") as f:
         f.write(f"{repo_owner}\t{repo_name}\t{key}\t{value}\n")
-
 
 def setup_logging(level=logging.INFO):
     """
@@ -150,6 +153,10 @@ def _read_github_key(config):
 def _generate_data_summary(repo_owner, repo_name, ai_model):
     ai_service = ai_model.split("|")[0]
     model = ai_model.split("|")[1]
+
+    print(ai_service)
+    print(model)
+
 
     author_data = get_author_commit_count(repo_owner, repo_name)
     author_data_summary = get_author_commit_count_summary(author_data, ai_service, model)
