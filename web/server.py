@@ -5,7 +5,7 @@ import glob
 import os
 import re
 from collections import namedtuple, defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date as ddate
 from isoweek import Week
 import pprint as pp
 
@@ -15,23 +15,21 @@ app = Flask(__name__, static_url_path='', static_folder='static')
 
 COLORS = ['#465659', '#7CA2A6', '#172626', '#D98943', '#D9A78B', '#59696D', '#8CD0B6']
 
+# the root page, which shows a list of repos, if available
 @app.route('/')
 def serve_index():
     repos = []
     for db_file in glob.glob('../output/*.db'):
         repo_name = os.path.basename(db_file).replace('.db', '')
         repo_name = repo_name.replace('-', '/', 1)
-        print(repo_name)
         repos.append(repo_name)
     return render_template('index.html', repos=repos)
 
 
-
+# the default page of data for a given repo
 @app.route('/<repo_parent>/<repo_name>')
 def serve_repo(repo_parent, repo_name):
-    print("serve_repo", repo_parent, repo_name)
     if repo_parent == 'static':
-        print("send from directory", app.static_folder)
         return send_from_directory(app.static_folder, repo_name)
 
     # Capture query string parameters
@@ -46,80 +44,170 @@ def serve_repo(repo_parent, repo_name):
         startAt = _get_first_commit_date(args)
     endAt = _get_last_run(repo_parent, repo_name)
     
-    print(startAt, endAt)
     return render_template('default.html',    
                             repo_parent=repo_parent, 
                             repo_name=repo_name,
                             startAt=startAt,
                             endAt=endAt)
 
+# 1: Commits By Author
 @app.route('/author-commits', methods=['GET'])
-def get_data():
+def get_author_commits():
     request_args = request.args.to_dict()
     since = request_args.get('startAt', None)
-    author_data = query_contributions_by_author(request_args, since=since)
+
+    db_name = _get_db_name(request_args)
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()    
+    
+    # 1: Commits By Author
+    query = """
+    SELECT author, COUNT(DISTINCT commit_hash) as total_commits
+    FROM commits
+    """
+    # Adding date filter if 'since' is provided
+    if since:        
+        # since exists as mm/dd/yyyy
+        # convert to timestamp
+        since_ts = datetime.strptime(since, '%m/%d/%Y').timestamp()
+        query += f" WHERE timestamp >= '{since_ts}'"
+    
+    query += " GROUP BY author"
+    query += " ORDER BY total_commits DESC LIMIT 50" 
+
+
+    # Execute the query
+    cursor.execute(query)
+    result = cursor.fetchall()
+    conn.close()
+
+    author_data = result
+
     data = []
     for author, num_commits in author_data:
         data.append({"author": author, "commits": num_commits})
     return jsonify(data)
 
+# 2: Commits By Filename
 @app.route('/file-changes', methods=['GET'])
 def get_file_changes_data():
     request_args = request.args.to_dict()
     since = request_args.get('startAt', None)
-    file_data = get_changes_by_file(request_args, since=since)
+
+    db_name = _get_db_name(request_args)
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()    
+
+    # 2: Commits By Filename
+    # Base query to get unique commits count per file
+    query = """
+    SELECT filename, COUNT(DISTINCT commit_hash) as total_unique_commits
+    FROM commits 
+    WHERE description is not NULL 
+    """
+    
+    # Adding date filter if 'since' is provided
+    if since:        
+        # since exists as mm/dd/yyyy
+        # convert to timestamp
+        since_ts = datetime.strptime(since, '%m/%d/%Y').timestamp()
+        query += f" AND timestamp >= '{since_ts}'"
+    
+    query += " GROUP BY filename"
+    query += " ORDER BY total_unique_commits DESC LIMIT 50"  
+
+    # Execute the query
+    cursor.execute(query)
+    result = cursor.fetchall()
+    conn.close()
+
     data = []
-    for author, num_commits in file_data:
+    for author, num_commits in result:
         data.append({"filename": author, "commits": num_commits})
     return jsonify(data)
 
-
+# 3 Commits Over Time
 @app.route('/commits-over-time', methods=['GET'])
 def get_commits_over_time_data():
     request_args = request.args.to_dict()
     since = request_args.get('startAt', None)
-    file_data = get_contributions_over_time_by_week(request_args, since=since)
+
+    db_name = _get_db_name(request_args)
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()    
     
-    # Assuming file_data is a list of tuples in the format [(year-week, num_commits), ...]
-    data_dict = {date_str: num_commits for date_str, num_commits in file_data}
+
+    # Base query to get unique commits count per day
+    query = """
+    SELECT 
+        strftime('%Y-%m-%d', date) as day,
+        COUNT(DISTINCT commit_hash) as total_unique_commits
+    FROM commits
+    """
+
+    # Adding date filter if 'startAt' is provided
+    if since:
+        since_ts = datetime.strptime(since, '%m/%d/%Y').timestamp()
+        query += f" WHERE timestamp >= '{since_ts}'"
+    
+    query += f" GROUP BY day ORDER BY day"
+
+    # Execute the query
+    cursor.execute(query)
+    result = cursor.fetchall()
+    conn.close()
+
+    # 3 Commits Over Time
+    data_dict = {}
+    for row in result:
+        tstring = datetime.strptime(str(row[0]), '%Y-%m-%d')
+        data_dict[tstring] = row[1]
     
     # Determine the date range
     if since:
         start_date = datetime.strptime(since, '%m/%d/%Y')        
     else:
-        # Parse the first date string in the data_dict keys
-        first_date_str = min(data_dict.keys())
-        year, week = map(int, first_date_str.split('-'))
-        start_date = Week(year, week).monday()
+        start_date = min(data_dict.keys())
     
+    # how many days from first date to now?
+
     # Parse the last date string in the data_dict keys
-    last_date_str = max(data_dict.keys())
-    year, week = map(int, last_date_str.split('-'))
-    end_date = Week(year, week).monday()
+    end_date = max(data_dict.keys())
+    date_difference = end_date - start_date
+    resolution = "Day"
+    if date_difference.days > 90:
+        resolution = "Week"
     
-    # Generate all weeks between the start and end dates
-    data = []
-    current_date = start_date.date()
-    while current_date <= end_date:
-        year, week, _ = current_date.isocalendar()
-        date_str = f"{year}-{week:02d}"
-        iso_date = Week(year, week).monday().isoformat()
-        commits = data_dict.get(date_str, 0)
-        data.append({"date": iso_date, "commits": commits})
-        current_date += timedelta(weeks=1)
-    
-    return jsonify(data)
+    # Initialize the date range and counts
+    date_counts = defaultdict(int)
 
 
-@app.route('/commits-by-directory', methods=['GET'])
-def get_commits_by_directory_data():
-    file_data = aggregate_commits_by_directory()
+    # Generate date range based on resolution
+    if resolution == "Day":
+        current_date = start_date
+        while current_date <= end_date:
+            date_counts[current_date] = data_dict.get(current_date, 0)
+            current_date += timedelta(days=1)
+    elif resolution == "Week":
+        current_date = start_date - timedelta(days=start_date.weekday())  # Start from the beginning of the week
+        while current_date <= end_date:
+            week_count = sum(data_dict.get(current_date + timedelta(days=i), 0) for i in range(7))
+            date_counts[current_date] = week_count
+            current_date += timedelta(weeks=1)
+    else:
+        raise ValueError("Invalid resolution. Choose from 'Day' or 'Week'")
+
+    # Convert the date_counts to a sorted list of tuples (date, count)
+    result = sorted(date_counts.items())
+
+    # Print result
+    data_overall = {"type": resolution}
     data = []
-#    for date_str, num_commits in file_data:
-#        year, week = map(int, date_str.split('-'))
-#        iso_date = Week(year, week).monday().isoformat()
-#        data.append({"date": iso_date, "commits": num_commits})
-    return jsonify(data)
+    for date, count in result:
+        data.append({"date": date.strftime('%Y-%m-%d'), "commits": count})
+    data_overall['data'] = data
+    print(data_overall)
+    return jsonify(data_overall)
 
 @app.route('/tags-frequency')
 def get_tags_frequency():
@@ -233,8 +321,8 @@ def get_commits_by_tag_week():
     return jsonify(result)
 
 
-@app.route('/pull-requests-over-time')
-def pull_requests_over_time():
+@app.route('/pull-requests-recent')
+def pull_requests_recent():
     db_name = _get_db_name(request.args.to_dict())
     conn = sqlite3.connect(db_name)
     cursor = conn.cursor()
@@ -243,15 +331,30 @@ def pull_requests_over_time():
     since_clause = ''
     if since is not None:
         since_s = datetime.strptime(since, '%m/%d/%Y')
-        since_clause = f' WHERE closed_at >= \'{since_s}\''
+        since_clause = f' WHERE pr.closed_at >= \'{since_s}\''
 
     query = f'''
-        SELECT strftime('%Y-%m-%d', merged_at) as date, COUNT(*) as pr_count,
-        title, html_url, number, user_login
-        FROM pull_requests
+        SELECT 
+            strftime('%Y-%m-%d', pr.merged_at) AS date, 
+        COUNT(c.filename) AS file_count,
+            pr.title, 
+            pr.html_url, 
+            pr.number, 
+            pr.user_login,
+            pr.description
+        FROM 
+            pull_requests pr
+        JOIN 
+            commits c 
+        ON 
+            pr.merge_commit_sha = c.commit_hash
         {since_clause}
-        GROUP BY number
-        ORDER BY date
+        GROUP BY 
+            pr.number
+        ORDER BY 
+            date DESC
+        LIMIT
+            10;           
     '''
 
     cursor.execute(query)
@@ -259,7 +362,7 @@ def pull_requests_over_time():
     conn.close()
     
     data = defaultdict(lambda: defaultdict(int))
-    for closed_date, commit_count, title, html_url, pr_number, user_login in result:
+    for closed_date, commit_count, title, html_url, pr_number, user_login, description in result:
         closed_datetime = datetime.strptime(closed_date, '%Y-%m-%d')
         year, week, _ = closed_datetime.isocalendar()
         week_str = f"{year}-{week:02d}"
@@ -269,6 +372,10 @@ def pull_requests_over_time():
         data[pr_number]['pr_url'] = html_url
         data[pr_number]['user'] = user_login
         data[pr_number]['date'] = closed_datetime.strftime('%Y-%m-%d')
+        description = description.replace("\n", "<BR>")
+        for x in range(1,10):
+            description = description.replace(f"{x}. ", "&nbsp;&#8226;&nbsp;")
+        data[pr_number]['description'] = description
 
     chart_data = [{ 'pr_number': pid, 
                     'file_count': data[pid]['pr_count'],
@@ -277,6 +384,7 @@ def pull_requests_over_time():
                     'date': data[pid]['date'],
                     'week_str': data[pid]['week_str'],
                     'user': data[pid]['user'],
+                    'description': data[pid]['description']
                    } for pid in data.keys()]
     return jsonify(chart_data)
 
@@ -348,92 +456,9 @@ def summarize_data_with_ai():
         return jsonify({"status": "error", "message": "Failed to process data"}), 400
 
 
-# Query 1
-def query_contributions_by_author(request_dict, since=None):
-    db_name = _get_db_name(request_dict)
-    conn = sqlite3.connect(db_name)
-    cursor = conn.cursor()    
-    
-    query = """
-    SELECT author, COUNT(DISTINCT commit_hash) as total_commits
-    FROM commits
-    """
-#    since = '1704729920'
-    # Adding date filter if 'since' is provided
-    if since:        
-        # since exists as mm/dd/yyyy
-        # convert to timestamp
-        since_ts = datetime.strptime(since, '%m/%d/%Y').timestamp()
-        query += f" WHERE timestamp >= '{since_ts}'"
-    
-    query += " GROUP BY author"
-    query += " ORDER BY total_commits DESC LIMIT 25" 
-
-    print(query)
-
-    # Execute the query
-    cursor.execute(query)
-    result = cursor.fetchall()
-    conn.close()
-    return result
-
-# Query 2: Changes by File
-def get_changes_by_file(request_dict, since=None):
-    db_name = _get_db_name(request_dict)
-    conn = sqlite3.connect(db_name)
-    cursor = conn.cursor()    
-
-    
-    # Base query to get unique commits count per file
-    query = """
-    SELECT filename, COUNT(DISTINCT commit_hash) as total_unique_commits
-    FROM commits 
-    """
-    
-    # Adding date filter if 'since' is provided
-    if since:        
-        # since exists as mm/dd/yyyy
-        # convert to timestamp
-        since_ts = datetime.strptime(since, '%m/%d/%Y').timestamp()
-        query += f" WHERE timestamp >= '{since_ts}'"
-    
-    query += " GROUP BY filename"
-    query += " ORDER BY total_unique_commits DESC LIMIT 25"  
-    
-    # Execute the query
-    cursor.execute(query)
-    result = cursor.fetchall()
-    conn.close()
-    return result
 
 
-# Query 3: Contributions Over Time
-def get_contributions_over_time_by_week(request_dict, since=None):
-    db_name = _get_db_name(request_dict)
-    conn = sqlite3.connect(db_name)
-    cursor = conn.cursor()    
-    
-    # Base query to get unique commits count per week (Sunday to Saturday)
-    query = """
-    SELECT 
-        strftime('%Y-%W', date) as week,
-        COUNT(DISTINCT commit_hash) as total_unique_commits
-    FROM commits
-    """
 
-    # Adding date filter if 'startAt' is provided
-    if since:
-        since_ts = datetime.strptime(since, '%m/%d/%Y').timestamp()
-        query += f" WHERE timestamp >= '{since_ts}'"
-    
-    query += " GROUP BY week ORDER BY week"
-
-
-    # Execute the query
-    cursor.execute(query)
-    result = cursor.fetchall()
-    conn.close()
-    return result
 
 
 # Query 4: Aggregate Commits by Directory

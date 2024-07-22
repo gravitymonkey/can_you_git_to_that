@@ -21,10 +21,11 @@ tags	Infrastructure, Database, Frontend, API, Backend, Security, Performance, Bu
 ai_description_max	800
 
 # ai engine and model for generated diff descriptions
-ai_description_model	ollama|mistral 
+ai_description_model	ollama|mistral-8K
 
 # should we fill commit descriptions from log? useful if you re-run multiple times
 use_commit_desc_from_log	True
 
-# ai engine and model for overview summary descriptions
-ai_summary_model	ollama|mistral
+# ai engine and model for pull request summaries and data summaries
+#ai_summary_model	openai|gpt-3.5-turbo
+ai_summary_model	ollama|mistral-8K

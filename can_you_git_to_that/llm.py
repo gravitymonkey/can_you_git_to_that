@@ -1,7 +1,8 @@
 from openai import OpenAI
 import sqlite3
 import json
-from .llm_config import get_base_url, get_key
+import logging
+from .llm_config import get_base_url, get_key, num_tokens_from_string
 
 
 def summarize_diff(filename, diff, file_sample, ai_service, ai_model):
@@ -25,6 +26,9 @@ def summarize_diff(filename, diff, file_sample, ai_service, ai_model):
     """
     prompt = f"File: {filename}\n{clause}\n\n{data}\n"
     
+    num_tokens = num_tokens_from_string(prompt)
+    logging.info("summarize diff has prompt w/num tokens: %s", num_tokens)
+
     client = OpenAI(
         base_url = get_base_url(ai_service),
         api_key= get_key(ai_service),
@@ -51,6 +55,8 @@ def shorter_summarize_diff(filename, long_summary, ai_service, ai_model):
     attempting to document the changes in a clear and concise manner for a product-focused user.
     """
     prompt = f"File: {filename}\nJunior Developer Summary:\n\n{long_summary}\n"
+    num_tokens = num_tokens_from_string(prompt)
+    logging.info("shorter_summarize_diff has prompt w/num tokens: %s", num_tokens)
 
     client = OpenAI(
         base_url = get_base_url(ai_service),
@@ -102,7 +108,8 @@ def classify_description(tags, desc, ai_service, ai_model):
 
     """
     prompt = f"Description: {desc}\n"
-
+    num_tokens = num_tokens_from_string(prompt)
+    logging.info("classify description has prompt w/num tokens: %s", num_tokens)
     client = OpenAI(
         base_url = get_base_url(ai_service),
         api_key= get_key(ai_service),
@@ -118,3 +125,43 @@ def classify_description(tags, desc, ai_service, ai_model):
     )
     return response.choices[0].message.content 
 
+def summarize_pr(prs, ai_service, ai_model):
+
+    system = """
+    You are a talented and technically skilled product manager. 
+    Your task is to write simple summary of all code changes 
+    in a given pull request so non-technical stakeholders can understand. 
+    """
+
+    prompt = f"""
+    The following blocks of text, separated by two dashes (--) and are descriptions of 
+    edits on files in a code repo for a single pull request.  Read all the separate blocks,
+    but provide a very simple and very brief overview summary for ALL the edits PUT TOGETHER,
+    and create a single, easy to understand, very high-level summary.  
+    DO NOT SUMMARIZE EACH SEPARATE CHANGE IN A NUMBERED BULLET LIST, SUMMARIZE ALL AT ONCE. 
+    Do not use any technical terms and jargon.
+    Keep it very general and brief, summarizing all edits in one paragraph, 
+    and make sure it's suitable for non-technical readers as an 
+    executive summary.  Provide ONLY a single, simple paragraph as a response. 
+    DO NOT RESPOND WITH A LIST.
+    \n
+    --  
+    {prs}\n"""
+    
+    num_tokens = num_tokens_from_string(prompt)
+    logging.info("summarize pr has prompt w/num tokens: %s", num_tokens)
+
+    client = OpenAI(
+        base_url = get_base_url(ai_service),
+        api_key= get_key(ai_service),
+    )
+    model = ai_model
+    response = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.2
+    )
+    return response.choices[0].message.content 
