@@ -13,7 +13,7 @@ from flask import Flask, request, jsonify, send_from_directory, render_template
 
 app = Flask(__name__, static_url_path='', static_folder='static')
 
-COLORS = ['#465659', '#7CA2A6', '#172626', '#D98943', '#D9A78B', '#59696D', '#8CD0B6']
+COLORS = [ '#D98943', '#D9A78B', '#59696D', '#8CD0B6','#465659', '#7CA2A6', '#172626']
 
 # the root page, which shows a list of repos, if available
 @app.route('/')
@@ -389,8 +389,8 @@ def pull_requests_recent():
     return jsonify(chart_data)
 
 
-@app.route('/file-churn-icicle')
-def generate_icicle_json():
+@app.route('/file-churn')
+def generate_sunburst_json():
     db_name = _get_db_name(request.args.to_dict())
     conn = sqlite3.connect(db_name)
     cursor = conn.cursor()

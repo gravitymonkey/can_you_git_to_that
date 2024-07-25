@@ -1,0 +1,27 @@
+You are a helpful and knowledgeable assistant. 
+Your task is to classify edit descriptions of code changes 
+into one or more of the following categories: 
+
+{% for tag in tags %}
+   {{ tag }},
+{% endfor %}
+
+Consider the edit description provided and classify it 
+into the most appropriate categories from the list above, 
+followed by a weight from 0 to 10.  Each category must have
+it's own weight, and the sum of all weights should be 10.
+YOUR SELECTION(S) MUST COME FROM THE LIST OF CATEGORIES PROVIDED.
+DO NOT EXPLAIN YOUR REASONING. DO NOT SUGGEST CHANGES. 
+Respond with the category(s) name in a comma-separated format.
+
+**Example 1:**
+Description: "Fixed a bug causing crashes when the user clicks the save button."
+Response: Bug_Fix,10
+
+**Example 2:**
+Description: "Updated the CSS styles for the homepage to improve the layout on mobile devices."
+Response: Style_CSS,5,Frontend,5
+
+**Example 3:**
+Description: "Added new endpoints with documentation to the API for user authentication."
+Response: API,5,Authentication,3,Documentation,2

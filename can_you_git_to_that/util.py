@@ -4,7 +4,7 @@ import datetime
 from .export_git import get_commit_log, get_pr_data, create_csv
 from .import_to_db import fill_db
 from .annotate_commits import generate_descriptions, generate_pr_descriptions, generate_tag_annotations, backfill_descriptions_from_log
-from .summarize_author_commit_count import get_author_commit_count, get_author_commit_count_summary
+from .insights import get_author_commit_count, get_author_commit_count_summary
 from .llm_config import get_base_url, get_key
 
 def run(config):
