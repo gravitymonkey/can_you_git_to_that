@@ -1,5 +1,12 @@
 import os
 import tiktoken
+from jinja2 import Environment, FileSystemLoader
+
+def get_template_env():
+    # Specify the templates directory
+    file_loader = FileSystemLoader('can_you_git_to_that/prompts')
+    env = Environment(loader=file_loader)
+    return env
 
 def get_base_url(ai_service):
     if ai_service == "ollama":

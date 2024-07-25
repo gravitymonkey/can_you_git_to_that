@@ -62,8 +62,8 @@ document.addEventListener("DOMContentLoaded", function() {
         return data;
     }
 
-    async function fetchIcicleData() {
-        let url = '/file-churn-icicle?repo_parent=' + repoParent + '&repo_name=' + repoName;        
+    async function fetchSunburstData() {
+        let url = '/file-churn?repo_parent=' + repoParent + '&repo_name=' + repoName;        
         if (startAt) {
             url += '&startAt=' + startAt;
         }
@@ -462,12 +462,11 @@ function createTagsFrequencyChart(data) {
         });
     }
 
-    function createIcicleChart(data, width) {
-          Icicle()
+    function createSunburstChart(data, width) {
+          Sunburst()
             .data(data)
             .height(600)
             .width(width)
-            .orientation('lr')
             .excludeRoot(true)
             .label('name')
             .size('size')
@@ -475,7 +474,7 @@ function createTagsFrequencyChart(data) {
             .color('color')
             .tooltipTitle((d, node) => node.data.name)
             .tooltipContent((d, node) => `Churn: <i>${node.value}</i>`)
-            (document.getElementById('file-icicle'));
+            (document.getElementById('file-sunburst'));
     }
 
     async function fetch_ai_summary(chart_id, data) {
@@ -538,10 +537,10 @@ function createTagsFrequencyChart(data) {
         createPullRequestsChart(data, startAt);
     });
 
-    fetchIcicleData().then(data => {
-        resizeChart('file-icicle', data);
+    fetchSunburstData().then(data => {
+        resizeChart('file-sunburst', data);
         // Add a resize event listener to handle window resizing
-        window.addEventListener('resize', () => resizeChart('file-icicle', data));
+        window.addEventListener('resize', () => resizeChart('file-sunburst', data));
     });
 
     function resizeChart(whichChart, data) {
@@ -553,8 +552,8 @@ function createTagsFrequencyChart(data) {
     
         // Create the chart with the new dimensions
         console.log(whichChart)
-        if (whichChart == 'file-icicle'){
-            createIcicleChart(data, width);
+        if (whichChart == 'file-sunburst'){
+            createSunburstChart(data, width);
         }
     }  
 

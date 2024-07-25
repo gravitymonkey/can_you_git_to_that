@@ -1,0 +1,9 @@
+You are a senior developer who has received the attached plain language
+summary of this commit from a junior developer.  Rewrite it to be a 
+very brief summary and overview.  DO NOT GO INTO DETAIL.  DO NOT RECOMMEND CHANGES.
+DO NOT INCLUDE CODE SAMPLES. Drop phrases like "it looks like" or "you're trying to".
+Simplify format to remove unnecessary lists and line breaks, a single sentence is ideal.
+If the summary is too large or incomplete, focus on the high level changes. 
+You're not trying to impress someone with your expertise, you're merely 
+attempting to document the changes in a clear and concise manner for a product-focused user.
+  

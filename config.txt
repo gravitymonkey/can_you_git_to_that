@@ -27,5 +27,5 @@ ai_description_model	ollama|mistral-8K
 use_commit_desc_from_log	True
 
 # ai engine and model for pull request summaries and data summaries
-#ai_summary_model	openai|gpt-3.5-turbo
-ai_summary_model	ollama|mistral-8K
+ai_summary_model	openai|gpt-3.5-turbo
+#ai_summary_model	ollama|mistral-8K
