@@ -307,6 +307,26 @@ function createTagsFrequencyChart(data) {
     });
 }   
 
+async function fetchInsightsSummary(which) {
+    const url = '/explain';  // The endpoint for your POST request
+    const payload = {
+        repo_parent: repoParent,
+        repo_name: repoName,
+        request_type: which
+    };
+    
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+    return data.summary; // Assuming the server returns an object with a 'summary' field
+}
+
     // Add new create function for the stacked bar chart
     function createCommitsByTagWeekChart(data) {
         const ctx = document.getElementById('commits-by-tag-week-chart').getContext('2d');
@@ -477,34 +497,10 @@ function createTagsFrequencyChart(data) {
             (document.getElementById('file-sunburst'));
     }
 
-    async function fetch_ai_summary(chart_id, data) {
-        try {
-            const response = await fetch('/explain', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ chart_id, data })
-            });
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            const result = await response.json();            
-            displayAISummary(chart_id, result.message);
-        } catch (error) {
-            console.error('Error:', error);
-        }
-    }
 
-    function displayAISummary(chart_id, summary) {
-        console.log(chart_id)
-        const summaryContainer = document.getElementById(chart_id + "-summary");
-        summaryContainer.innerHTML = summary
-    }
 
     fetchAuthorData().then(data => {
         createAuthorCommitChart(data);
-        fetch_ai_summary("author-commits", data)
     });
 
     fetchFileChangeData().then(data => {
@@ -556,5 +552,19 @@ function createTagsFrequencyChart(data) {
             createSunburstChart(data, width);
         }
     }  
+
+    
+    fetchInsightsSummary('author-commits-summary').then(summary => {
+        document.getElementById('author-commits-summary').textContent = summary;
+    });
+
+//    fetchInsightsSummary('file-commits-summary').then(summary => {
+//        document.getElementById('file-commits-summary').textContent = summary;
+//    });
+
+    fetchInsightsSummary('commit-count-by-date-summary').then(summary => {
+        document.getElementById('commit-count-by-date-summary').textContent = summary;
+    });
+
 
 });

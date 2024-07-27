@@ -4,7 +4,7 @@ import datetime
 from .export_git import get_commit_log, get_pr_data, create_csv
 from .import_to_db import fill_db
 from .annotate_commits import generate_descriptions, generate_pr_descriptions, generate_tag_annotations, backfill_descriptions_from_log
-from .insights import get_author_commit_count, get_author_commit_count_summary
+from .insights import generate_insights
 from .llm_config import get_base_url, get_key
 
 def run(config):
@@ -46,7 +46,7 @@ def run(config):
     db_path = fill_db(config)
     logging.info("database written to %s", db_path)
 
-    logging.info("backfilling descriptions from log")
+    logging.info("calling backfilling descriptions from log")
     backfill_descriptions_from_log(repo_owner, repo_name, use_commit_desc_from_log)    
 
     logging.info("Generating commit diff descriptions")
@@ -60,7 +60,7 @@ def run(config):
     generate_tag_annotations(repo_owner, repo_name, ai_model)
 
     logging.info("generate LLM summary core data")
-    _generate_data_summary(repo_owner, repo_name, summary_ai_model)
+    generate_insights(repo_owner, repo_name, summary_ai_model)
 
     _log_master("last_completed", repo_owner, repo_name, datetime.datetime.now().isoformat())
 
@@ -148,17 +148,4 @@ def _read_github_key(config):
         logging.error("GitHub access token not found in environment variables")
         logging.error("SET an environment variable CYGTT_GITHUB_ACCESS_TOKEN with your GitHub access token")   
         raise ValueError("No GitHub access token found - Check docs for more information")
-
-
-def _generate_data_summary(repo_owner, repo_name, ai_model):
-    ai_service = ai_model.split("|")[0]
-    model = ai_model.split("|")[1]
-
-    print(ai_service)
-    print(model)
-
-
-    author_data = get_author_commit_count(repo_owner, repo_name)
-    author_data_summary = get_author_commit_count_summary(author_data, ai_service, model)
-    print(author_data_summary)
 

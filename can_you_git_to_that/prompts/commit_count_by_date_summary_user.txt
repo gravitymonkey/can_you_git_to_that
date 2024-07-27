@@ -1,0 +1,10 @@
+You received the follow data which lists the number of commits
+to this repo, and the number of files in those commits, summed per day.
+Explain what the patterns of commit volumes as activity levels may mean over time,
+contrasting the current usage (most recent month or so) versus historical
+commit levels, and what that might reflect about the importance of this repo
+to current priorities and needs.
+        
+        
+
+        {{  data }}

@@ -2,8 +2,7 @@ from openai import OpenAI
 import sqlite3
 import json
 import logging
-from .llm_config import get_base_url, get_key, num_tokens_from_string, get_template_env
-from jinja2 import Environment
+from .llm_config import get_base_url, get_key, num_tokens_from_string, get_prompt
 
 def summarize_diff(filename, diff, file_sample, ai_service, ai_model):
     """
@@ -20,19 +19,16 @@ def summarize_diff(filename, diff, file_sample, ai_service, ai_model):
         str: The summarized difference.
 
     """
+    system = get_prompt('summarize_diff_system.txt', {})
+
     clause = "Unified Diff:"
     data = diff
     if diff is None:
         clause = "File Content:"
         data = file_sample
 
-    env = get_template_env()    
-    template = env.get_template('summarize_diff_system.txt')
-    system = template.render()
-
     user_prompt_prompts = {"filename": filename, "clause": clause, "data": data}
-    template = env.get_template('summarize_diff_user.txt')
-    prompt = template.render(user_prompt_prompts)
+    prompt = get_prompt('summarize_diff_user.txt', user_prompt_prompts)
     
     num_tokens = num_tokens_from_string(prompt)
     logging.info("summarize diff has prompt w/num tokens: %s", num_tokens)
@@ -52,13 +48,11 @@ def summarize_diff(filename, diff, file_sample, ai_service, ai_model):
     return response.choices[0].message.content.strip()
 
 def shorter_summarize_diff(filename, long_summary, ai_service, ai_model):
-    env = get_template_env()    
-    template = env.get_template('shorter_summarize_diff_system.txt')
-    system = template.render()
+    system = get_prompt('shorter_summarize_diff_system.txt', {})
 
     user_prompt_data = {"filename": filename, "long_summary": long_summary}
-    template = env.get_template('shorter_summarize_diff_user.txt')
-    prompt = template.render(user_prompt_data)
+    prompt = get_prompt('shorter_summarize_diff_user.txt', user_prompt_data)
+
     num_tokens = num_tokens_from_string(prompt)
     logging.info("shorter_summarize_diff has prompt w/num tokens: %s", num_tokens)
 
@@ -78,14 +72,11 @@ def shorter_summarize_diff(filename, long_summary, ai_service, ai_model):
 
 def classify_description(tags, desc, ai_service, ai_model):
 
-    env = get_template_env()    
-    template = env.get_template('classify_description_system.txt')
-    props = {"tags": tags}
-    system = template.render(props)
+    system = get_prompt('classify_description_system.txt', {"tags":tags})
 
-    template = env.get_template('classify_description_user.txt')
     props = {"description": desc}
-    prompt = template.render(props)
+    prompt = get_prompt('classify_description_user.txt', props)
+
     num_tokens = num_tokens_from_string(prompt)
 
     logging.info("classify description has prompt w/num tokens: %s", num_tokens)
@@ -106,16 +97,10 @@ def classify_description(tags, desc, ai_service, ai_model):
 
 def summarize_pr(prs, ai_service, ai_model):
 
-    env = get_template_env()    
-    template = env.get_template('summarize_pr_system.txt')
-    system = template.render()
+    system = get_prompt('summarize_pr_system.txt', {})
 
-    template = env.get_template('summarize_pr_user.txt')
-    props = {"prs": prs}
-    prompt = template.render(props)
+    prompt = get_prompt('summarize_pr_user.txt', {"prs": prs})
 
-    num_tokens = num_tokens_from_string(prompt)
-    
     num_tokens = num_tokens_from_string(prompt)
     logging.info("summarize pr has prompt w/num tokens: %s", num_tokens)
 
