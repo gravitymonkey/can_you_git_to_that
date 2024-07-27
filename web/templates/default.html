@@ -46,8 +46,19 @@
             <div class="bg-white p-4 rounded shadow">
                 <canvas id="author-commit-chart"></canvas>
             </div>
-            <div class="mt-4">
-                <p class="text-gray-700" id="author-commits-summary"></p>
+            <div class="flex mt-4">
+                <!-- New small column -->
+                <div class="w-1/4 bg-gray-200 p-2 rounded">
+                    <!-- Content for the small column -->
+                    <p class="text-gray-500 text-xs">Date Span<BR>
+                        When generated<BR>
+                        &#10060;<BR>
+                    </p>
+                </div>
+                <!-- Existing content -->
+                <div class="w-3/4 ml-4">
+                    <p class="text-gray-500 text-xs" id="author-commits-summary"></p>
+                </div>
             </div>
         </div>
 
@@ -58,7 +69,7 @@
                 <canvas id="file-changes-chart"></canvas>
             </div>
             <div class="mt-4">
-                <p class="text-gray-700">Explanation of the file changes...</p>
+                <p class="text-gray-500 text-xs" id="file-commits-summary"></p>
             </div>
         </div>
 
@@ -69,7 +80,7 @@
                 <canvas id="commits-over-time-chart"></canvas>
             </div>
             <div class="mt-4">
-                <p class="text-gray-700">Explanation of the commits over time...</p>
+                <p class="text-gray-500 text-xs" id="commit-count-by-date-summary"></p>
             </div>
         </div>
 

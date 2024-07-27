@@ -8,6 +8,7 @@ from collections import namedtuple, defaultdict
 from datetime import datetime, timedelta, date as ddate
 from isoweek import Week
 import pprint as pp
+import traceback
 
 from flask import Flask, request, jsonify, send_from_directory, render_template
 
@@ -448,16 +449,39 @@ def generate_sunburst_json():
 def summarize_data_with_ai():
     try:
         data = request.json
-        print(f"Received data: {data}")
-        # You can process the data here and return a response
-        return jsonify({"status": "success", "message": "Data received", "data": data}), 200
+        print(f"/explain received data: {data}")
+        request_type = data['request_type']
+        summary = _get_summary(_get_db_name(data), request_type)
+        if not summary is None:
+            return jsonify({"status": "success", "message": "Data received", "summary": summary}), 200
+        else:
+            return jsonify({"status": "empty", "message": "No Data", "summary": "- :) - "}), 200
+
     except Exception as e:
+        traceback.print_exc() 
         print(f"Error: {e}")
         return jsonify({"status": "error", "message": "Failed to process data"}), 400
 
 
 
+def _get_summary(db_name, request_type):
+    print('get summary')
+    print(db_name)
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()
+    
+    # here we ignore files that have null descriptions
+    # because (earlier) we don't generate descriptions
+    # for files that are not code files as spec'd in the config
+    cursor.execute("""
+        SELECT summary from summaries where name = ?
+        ORDER BY createdAt DESC LIMIT 1
+    """, (request_type,))
+    summary = cursor.fetchone()
+    print(summary)
+    conn.close()
 
+    return summary
 
 
 

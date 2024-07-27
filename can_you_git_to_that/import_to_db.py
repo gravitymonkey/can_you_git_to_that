@@ -110,6 +110,19 @@ def _import_pull_requests(config, conn):
 
     conn.commit()
 
+def _create_summaries_table(conn):
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS summaries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            hash TEXT,
+            summary TEXT,
+            createdAt DATE,
+            UNIQUE(name, hash)
+        )
+    ''')
+    conn.commit()
 
 
 def fill_db(config, drop_existing=False):
@@ -129,6 +142,7 @@ def fill_db(config, drop_existing=False):
     conn = _connect_to_db(db_path)
     _insert_data(config, conn)
     _import_pull_requests(config, conn)
+    _create_summaries_table(conn)  # Ensure the summaries table is created
     conn.close()
 
     return db_path
