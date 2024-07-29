@@ -1,0 +1,5 @@
+PyGithub
+Jinja2
+openai
+pandas
+tiktoken
