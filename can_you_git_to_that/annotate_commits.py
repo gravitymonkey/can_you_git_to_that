@@ -134,7 +134,7 @@ def _annotate_code_file(repo_parent, repo_name, commit_sha, filename, access_tok
     ai_model = ai_info[1]
 
     summary = summarize_diff(filename, diff, file_sample, ai_service, ai_model)
-    logging.debug("summary generation\t%s\t%s:\n****\n%s\n***\n", filename, commit_sha, summary)
+    logging.info("summary generation\t%s\t%s:\n****\n%s\n***\n", filename, commit_sha, summary)
 
     if summary.strip().startswith("@@@"):
         raise ValueError("Model is spewing garbage")
@@ -218,7 +218,6 @@ def generate_pr_descriptions(repo_owner, repo_name, max_length, ai_info):
     prs = {}
     cursor.execute(query)
     rows = cursor.fetchall()
-    print(rows)
     for row in rows:
         commit_hash = row[0]
         pr_id = row[1]

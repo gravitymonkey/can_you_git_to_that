@@ -83,26 +83,14 @@ def get_pr_data(access_token, repo_owner, repo_name):
     # Get the repository
     repo = g.get_repo(f"{repo_owner}/{repo_name}")
 
-    # Get the highest PR number from the database
-    highest_pr_number = _get_highest_pr_number(repo_owner, repo_name)
+    existing_pr_numbers = _get_existing_pr_numbers(repo_owner, repo_name)    
 
-    # Fetch PRs using pagination and only include those greater than the highest number in the database
     pulls = []
-    page = 0
-    keep_going = True
-    while keep_going:
-        prs = repo.get_pulls(state='all', sort='created', direction='asc')
-        if prs.totalCount == 0:
-            break
-        for pr in prs:
-            if pr.number > highest_pr_number:
-                pulls.append(pr)
-            else:
-                # Since PRs are sorted by creation date, if we encounter a PR number <= highest_pr_number, we can stop
-                keep_going = False
-                break # only breaks the inner loop, so we need to flip keep_going too
-        page += 1
-
+    prs = repo.get_pulls(state='all', sort='created', direction='asc')
+    for pr in prs:
+        if pr.number not in existing_pr_numbers:
+            pulls.append(pr)
+    
     # Iterate through pull requests and print details
     # column names
     column_names = [
@@ -154,13 +142,13 @@ def get_pr_data(access_token, repo_owner, repo_name):
         output_file.write(output)
     return filename
 
-def _get_highest_pr_number(repo_owner, repo_path):
+def _get_existing_pr_numbers(repo_owner, repo_path):
     conn = sqlite3.connect(f"output/{repo_owner}-{repo_path}.db")    
     cursor = conn.cursor()
-    cursor.execute("SELECT MAX(number) FROM pull_requests")
-    result = cursor.fetchone()
+    cursor.execute("SELECT number FROM pull_requests")
+    result = cursor.fetchall()
     conn.close()
-    return result[0] if result[0] is not None else 0
+    return [x[0] for x in result]
 
 def create_csv(repo_parent, repo_name, log_filename, exclude_file_pattern="", exclude_author_pattern=""):
     """

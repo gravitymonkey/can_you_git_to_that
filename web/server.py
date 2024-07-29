@@ -142,7 +142,8 @@ def get_commits_over_time_data():
     query = """
     SELECT 
         strftime('%Y-%m-%d', date) as day,
-        COUNT(DISTINCT commit_hash) as total_unique_commits
+        COUNT(DISTINCT commit_hash) as total_unique_commits,
+        COUNT(DISTINCT filename) as unique_filenames_per_day
     FROM commits
     """
 
@@ -162,7 +163,7 @@ def get_commits_over_time_data():
     data_dict = {}
     for row in result:
         tstring = datetime.strptime(str(row[0]), '%Y-%m-%d')
-        data_dict[tstring] = row[1]
+        data_dict[tstring] = {"commit": row[1], "files": row[2]}
     
     # Determine the date range
     if since:
@@ -181,19 +182,22 @@ def get_commits_over_time_data():
     
     # Initialize the date range and counts
     date_counts = defaultdict(int)
+    file_counts = defaultdict(int)
 
 
     # Generate date range based on resolution
     if resolution == "Day":
         current_date = start_date
         while current_date <= end_date:
-            date_counts[current_date] = data_dict.get(current_date, 0)
+            dd = data_dict.get(current_date, {})
+            date_counts[current_date] = dd.get('commit', 0)
+            file_counts[current_date] = dd.get('files', 0)            
             current_date += timedelta(days=1)
     elif resolution == "Week":
         current_date = start_date - timedelta(days=start_date.weekday())  # Start from the beginning of the week
         while current_date <= end_date:
-            week_count = sum(data_dict.get(current_date + timedelta(days=i), 0) for i in range(7))
-            date_counts[current_date] = week_count
+            date_counts[current_date] = sum(data_dict.get(current_date + timedelta(days=i), 0) for i in range(7))
+            file_counts = sum(data_dict.get(current_date + timedelta(days=i), 0) for i in range(7))
             current_date += timedelta(weeks=1)
     else:
         raise ValueError("Invalid resolution. Choose from 'Day' or 'Week'")
@@ -205,9 +209,9 @@ def get_commits_over_time_data():
     data_overall = {"type": resolution}
     data = []
     for date, count in result:
-        data.append({"date": date.strftime('%Y-%m-%d'), "commits": count})
+        filec = file_counts[date]
+        data.append({"date": date.strftime('%Y-%m-%d'), "commits": count, "files": filec})
     data_overall['data'] = data
-    print(data_overall)
     return jsonify(data_overall)
 
 @app.route('/tags-frequency')
@@ -449,24 +453,30 @@ def generate_sunburst_json():
 def summarize_data_with_ai():
     try:
         data = request.json
-        print(f"/explain received data: {data}")
         request_type = data['request_type']
-        summary = _get_summary(_get_db_name(data), request_type)
-        if not summary is None:
-            return jsonify({"status": "success", "message": "Data received", "summary": summary}), 200
+        data = _get_summary(_get_db_name(data), request_type)
+        if not data is None:
+            return jsonify({"status": "success", 
+                            "message": "Data received", 
+                            "summary": data['summary'],
+                            "service": data['ai_service'],
+                            "model": data['ai_model'],
+                            "startAt" : data['start_date'],
+                            "endAt" : data['end_date'],
+                            }), 200
         else:
-            return jsonify({"status": "empty", "message": "No Data", "summary": "- :) - "}), 200
+            return jsonify({"status": "empty", "message": "No Data", "summary": "- -"}), 200
 
     except Exception as e:
         traceback.print_exc() 
-        print(f"Error: {e}")
         return jsonify({"status": "error", "message": "Failed to process data"}), 400
 
-
+def _process_date(datetime_str):
+    dx = datetime_str.split("T")[0]
+    dx = dx.replace("-", "/")
+    return dx
 
 def _get_summary(db_name, request_type):
-    print('get summary')
-    print(db_name)
     conn = sqlite3.connect(db_name)
     cursor = conn.cursor()
     
@@ -474,49 +484,56 @@ def _get_summary(db_name, request_type):
     # because (earlier) we don't generate descriptions
     # for files that are not code files as spec'd in the config
     cursor.execute("""
-        SELECT summary from summaries where name = ?
+        SELECT * from summaries where name = ?
         ORDER BY createdAt DESC LIMIT 1
     """, (request_type,))
-    summary = cursor.fetchone()
-    print(summary)
+    data = cursor.fetchone()
     conn.close()
+    result = {}
+    if data is not None:
+        result['id'] = data[0]
+        result['name'] = data[1]
+        result['hash'] = data[2]
+        result['summary'] = data[3]
+        result['ai_service'] = data[4]
+        result['ai_model'] = data[5]
+        result['start_date'] = _process_date(data[6])
+        result['end_date'] = _process_date(data[7])
+        result['createdAt'] = data[8]
 
-    return summary
+    return result
 
 
 
 # Query 4: Aggregate Commits by Directory
-def aggregate_commits_by_directory(since=None, num_levels=None):
-    request_args = request.args.to_dict()
-    file_list = get_changes_by_file(request_args, since=since)
-    dir_commits = {}
-    dir_count = 0
+#def aggregate_commits_by_directory(since=None, num_levels=None):
+#    request_args = request.args.to_dict()
+#    file_list = get_changes_by_file(request_args, since=since)
+#    dir_commits = {}
+#    dir_count = 0
     
     # Regular expression to match the pattern {old => new}
-    pattern = r'\{([^}]+)\s=>\s([^}]*)\}'
+#    pattern = r'\{([^}]+)\s=>\s([^}]*)\}'
 
-    for file, commit_count in file_list:
+#    for file, commit_count in file_list:
         # Check if the file name contains the pattern and extract the new path
-        match = re.search(pattern, file)
-        if match:
-            file = re.sub(pattern, match.group(1), file)
+#        match = re.search(pattern, file)
+#        if match:
+#            file = re.sub(pattern, match.group(1), file)
 
-        full_path = os.path.dirname(file)
-        if num_levels is not None:
-            path_parts = full_path.split(os.sep)
-            directory = os.sep.join(path_parts[:num_levels])
-        else:
-            directory = full_path
+#        full_path = os.path.dirname(file)
+#        if num_levels is not None:
+#            path_parts = full_path.split(os.sep)
+#            directory = os.sep.join(path_parts[:num_levels])
+#        else:
+#            directory = full_path
         
-        if directory not in dir_commits:
-            dir_commits[directory] = 0
-            dir_count += 1
-        dir_commits[directory] += commit_count
-    
-    for directory, commit_count in dir_commits.items():
-        print(f"{directory} - {commit_count} commits")
-    
-    return dir_commits, dir_count
+#        if directory not in dir_commits:
+#            dir_commits[directory] = 0
+#            dir_count += 1
+#        dir_commits[directory] += commit_count
+        
+#    return dir_commits, dir_count
 
 def _get_first_commit_date(request_dict):
     if not os.path.exists(_get_db_name(request_dict)):

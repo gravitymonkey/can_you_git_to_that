@@ -4,44 +4,173 @@ import json
 import hashlib
 from .llm_config import get_base_url, get_key, get_prompt, num_tokens_from_string
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
-def generate_insights(repo_owner, repo_name, ai_model):
+from collections import defaultdict
+
+
+def generate_insights(repo_owner, repo_name, ai_model, start_date, end_date):
     ai_service = ai_model.split("|")[0]
     model = ai_model.split("|")[1]
-    _generate_author_commit_count_summary(repo_owner, repo_name, ai_service, model)
-    _generate_file_commit_count_summary(repo_owner, repo_name, ai_service, model)   
-    _generate_commit_count_by_date_summary(repo_owner, repo_name, ai_service, model)
+    _generate_author_commit_count_summary(repo_owner, repo_name, ai_service, model, start_date, end_date)
+    _generate_file_commit_count_summary(repo_owner, repo_name, ai_service, model, start_date, end_date)   
+    _generate_commit_count_by_date_summary(repo_owner, repo_name, ai_service, model, start_date, end_date)
+    _generate_overall_tags_summary(repo_owner, repo_name, ai_service, model,start_date, end_date)
+    _generate_tags_by_week_summary(repo_owner, repo_name, ai_service, model,start_date, end_date)
+    _generate_churn_summary(repo_owner, repo_name, ai_service, model, start_date, end_date)
 
-def _generate_author_commit_count_summary(repo_owner, repo_name, ai_service, model):
+def _generate_author_commit_count_summary(repo_owner, repo_name, ai_service, model, start_date, end_date):
     author_data = _get_author_commit_count(repo_owner, repo_name)
     author_data_hash = _generate_hash(author_data) #author_data should be json string
     if not _commit_hash_exists("author-commits-summary", author_data_hash, repo_owner, repo_name):
         author_data_summary = _generate_summary("author_commit_count_summary", author_data, ai_service, model)
-        _save_summary("author-commits-summary", author_data_summary, repo_owner, repo_name, author_data_hash)
+        _save_summary("author-commits-summary", author_data_summary, repo_owner, repo_name, author_data_hash, ai_service, model, start_date, end_date)
     else:
         logging.info("Author commit count summary already exists for author-commits-summary with same author data")
 
-def _generate_file_commit_count_summary(repo_owner, repo_name, ai_service, model):   
+def _generate_file_commit_count_summary(repo_owner, repo_name, ai_service, model, start_date, end_date):   
     file_data = _get_file_commit_count(repo_owner, repo_name)
     file_data_hash = _generate_hash(file_data) 
     if not _commit_hash_exists("file-commit-count-summary", file_data_hash, repo_owner, repo_name):
         file_data_summary = _generate_summary("file_commit_count_summary", file_data, ai_service, model)
-        _save_summary("file-commit-count-summary", file_data_summary, repo_owner, repo_name, file_data_hash)
+        _save_summary("file-commit-count-summary", file_data_summary, repo_owner, repo_name, file_data_hash, ai_service, model, start_date, end_date)
     else:
-        logging.info("Author commit count summary already exists for author-commits-summary with same author data")
+        logging.info("File commit count summary already exists for file-commit-count-summary with same file data")
 
 
-def _generate_commit_count_by_date_summary(repo_owner, repo_name, ai_service, model):
+def _generate_commit_count_by_date_summary(repo_owner, repo_name, ai_service, model, start_date, end_date):
     commit_data = _get_commit_count_by_date(repo_owner, repo_name)
     commit_data_hash = _generate_hash(commit_data) 
-    print(commit_data_hash)
     if not _commit_hash_exists("commit-count-by-date-summary", commit_data_hash, repo_owner, repo_name):
         commit_data_summary = _generate_summary("commit_count_by_date_summary", commit_data, ai_service, model)
-        _save_summary("commit-count-by-date-summary", commit_data_summary, repo_owner, repo_name, commit_data_hash)
+        _save_summary("commit-count-by-date-summary", commit_data_summary, repo_owner, repo_name, commit_data_hash, ai_service, model, start_date, end_date)
     else:
         logging.info("Commit count by date summary already exists for commit-counts-by-date-summary with same commit data")
 
+def _generate_overall_tags_summary(repo_owner, repo_name, ai_service, model, start_date, end_date):
+    tag_data = _get_overall_tags(repo_owner, repo_name)
+    tag_data_hash = _generate_hash(tag_data) 
+    if not _commit_hash_exists("overall-tags-summary", tag_data_hash, repo_owner, repo_name):
+        tag_data_summary = _generate_summary("overall_tags_summary", tag_data, ai_service, model)
+        _save_summary("overall-tags-summary", tag_data_summary, repo_owner, repo_name, tag_data_hash, ai_service, model, start_date, end_date)
+    else:
+        logging.info("Tags summary already exists for overall-tags-summary with same source data")
+
+def _generate_tags_by_week_summary(repo_owner, repo_name, ai_service, model, start_date, end_date):
+    tag_data = _get_tags_by_week(repo_owner, repo_name)
+    print(tag_data)
+    tag_data_hash = _generate_hash(tag_data) 
+    print(tag_data_hash)
+    if not _commit_hash_exists("tags-by-week-summary", tag_data_hash, repo_owner, repo_name):
+        tag_data_summary = _generate_summary("tags_by_week_summary", tag_data, ai_service, model)
+        _save_summary("tags-by-week-summary", tag_data_summary, repo_owner, repo_name, tag_data_hash, ai_service, model, start_date, end_date)
+    else:
+        logging.info("Tags-by-week summary already exists for tags-by-week-summary with same source data")
+
+def _generate_churn_summary(repo_owner, repo_name, ai_service, model, start_date, end_date):
+    churn_data = _get_churn(repo_owner, repo_name)
+    churn_data_hash = _generate_hash(churn_data) 
+    if not _commit_hash_exists("churn-summary", churn_data_hash, repo_owner, repo_name):
+        churn_data_summary = _generate_summary("churn_summary", churn_data, ai_service, model)
+        _save_summary("churn-summary", churn_data_summary, repo_owner, repo_name, churn_data_hash, ai_service, model, start_date, end_date)
+    else:
+        logging.info("Churn summary already exists for churn-summary with same source data")
+
+def _get_overall_tags(repo_owner, repo_name):
+    conn = sqlite3.connect(f"output/{repo_owner}-{repo_name}.db")
+    cursor = conn.cursor()    
+    
+    query = '''
+        SELECT t.name, SUM(ct.value) AS total_value
+        FROM tags t
+        JOIN commit_tags ct ON t.id = ct.tag_id
+        GROUP BY t.name
+        ORDER BY total_value DESC
+    '''
+
+    cursor.execute(query)
+    results = cursor.fetchall()
+    conn.close()
+    rows = []
+    for row in results:
+        row_data = {    "tag": row[0], 
+                        "total_value": row[1]
+                    }
+        rows.append(row_data)
+    return json.dumps(rows, indent=4)
+
+def _get_tags_by_week(repo_owner, repo_name):
+    conn = sqlite3.connect(f"output/{repo_owner}-{repo_name}.db")
+    cursor = conn.cursor()    
+
+    query = '''
+            SELECT t.name, ct.value, c.timestamp
+            FROM tags t
+            JOIN commit_tags ct ON t.id = ct.tag_id
+            JOIN commits c ON ct.commit_id = c.id
+        '''
+
+    cursor.execute(query)
+    rows = cursor.fetchall()
+    conn.close()
+
+    data = defaultdict(lambda: defaultdict(int))
+
+    for tag, value, commit_timestamp in rows:
+        commit_datetime = datetime.fromtimestamp(commit_timestamp)
+        year, week, _ = commit_datetime.isocalendar()
+        week_str = f"{year}-{week:02d}"
+        data[week_str][tag] += value
+
+    # Ensure all weeks are included
+    since_date = min(datetime.fromtimestamp(row[2]) for row in rows)
+    current_date = datetime.now()
+    week_list = []
+    while since_date <= current_date:
+        year, week, _ = since_date.isocalendar()
+        week_list.append(f"{year}-{week:02d}")
+        since_date += timedelta(weeks=1)
+
+    result = []
+    for week in week_list:
+        year, xweek = map(int, week.split('-'))
+        first_day_of_week = datetime.strptime(f'{year}-W{xweek-1}-1', "%Y-W%U-%w").date()        
+        week_of = first_day_of_week + timedelta(days=(0 - first_day_of_week.weekday()))        
+        sweek_of = week_of.strftime("%Y-%m-%d")
+        result.append({
+            "week": week,
+            "week_starting": sweek_of,
+            "tags": data[week]
+        })
+
+    all_tags = set()
+    for week in result:
+        sum_values = sum(week['tags'].values())
+        for tag in week['tags']:
+            all_tags.add(tag)
+            raw = round(week['tags'][tag], 2)
+            perc = round((week['tags'][tag]/sum_values)*100, 2)
+            week['tags'][tag] = {
+                "raw": raw,
+                "percentage": perc
+            }
+    tag_track = {}
+    all_tags = list(all_tags)
+    all_tags.sort()
+    for tag in list(all_tags):
+        week_data = []
+        for week in result:
+            if tag in week['tags']:
+                week_data.append(week['tags'][tag]['percentage'])
+            else:
+                week_data.append(0)
+        tag_track[tag] = week_data
+
+    full_result = {}
+    full_result['percentage_by_tag_per_week'] = tag_track
+    full_result['by_week'] = result
+
+    return json.dumps(full_result, indent=4)
 
 def _get_file_commit_count(repo_owner, repo_name):
     conn = sqlite3.connect(f"output/{repo_owner}-{repo_name}.db")
@@ -112,15 +241,59 @@ def _get_commit_count_by_date(repo_parent, repo_name):
     
     return json.dumps(rows, indent=4)   
 
+def _get_churn(repo_owner, repo_name):
+    conn = sqlite3.connect(f"output/{repo_owner}-{repo_name}.db")
+    cursor = conn.cursor()    
+    cursor.execute("""
+        SELECT filename, SUM(churn_count) AS total_churn
+        FROM commits where description is not null
+        GROUP BY filename
+    """)
+    churn_data = cursor.fetchall()
 
-def _save_summary(which, summary, repo_owner, repo_name, data_hash):
+    # Convert the query result to a dictionary
+    data = {}
+    for item in churn_data:
+        filename = item[0]
+        total_churn = item[1]
+        path = filename.split('/')
+        current = data
+        for part in path[:-1]:
+            if part not in current:
+                current[part] = {}
+            current = current[part]
+        current[path[-1]] = total_churn
+
+    # Recursive function to build the JSON structure
+    def build_hierarchy(d, depth=0):
+        result = []
+        for key, value in d.items():
+            if isinstance(value, dict):
+                result.append({
+                    "folder_name": key,
+                    "children": build_hierarchy(value, depth + 1),
+                })
+            else:
+                result.append({
+                    "file_name": key,
+                    "churn": value,
+                })
+        return result
+    # Build the final JSON structure
+    json_data = {
+        "repo_name": repo_name,
+        "children": build_hierarchy(data)
+    }
+
+    return json.dumps(json_data, indent=4)
+
+def _save_summary(which, summary, repo_owner, repo_name, data_hash, ai_service, ai_model, start_date, end_date):
     conn = sqlite3.connect(f"output/{repo_owner}-{repo_name}.db")
     cursor = conn.cursor()
-
     cursor.execute('''
-        INSERT INTO summaries (name, hash, summary, createdAt)
-        VALUES (?, ?, ?, datetime('now'))
-    ''', (which, data_hash, summary))
+        INSERT INTO summaries (name, hash, ai_service, ai_model, summary, start_date, end_date, createdAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    ''', (which, data_hash, ai_service, ai_model, summary, start_date, end_date))
 
     conn.commit()
     conn.close()

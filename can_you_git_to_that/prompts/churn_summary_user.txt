@@ -1,0 +1,19 @@
+
+The data below is a JSON that outlines the directory structure of the repo
+and includes the amount of churn for files.
+
+Use this data to describe "hot spots" based on high churn for files
+that may have code quality or high maintenance issues.  And identify high churn files
+as areas of potential technical debt or as candidates for refactoring.
+
+DO NOT LIST FILES AND THEIR CHURN VALUES; DO NOT RESPOND WITH A LIST.
+
+Mark important phrases or key points, as one would with a highlighter on paper, 
+by enclosing it within || before, and || after.  Example: There are 
+||killer bees in the building|| and the catering has arrived in the kitchen.
+
+Respond only with a brief paragraph of prose mentioning the 1 to 5 files with the most notable churn values.
+
+
+
+{{  data }}

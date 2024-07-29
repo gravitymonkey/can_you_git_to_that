@@ -1,5 +1,6 @@
 import logging
 import os
+import sqlite3
 import datetime 
 from .export_git import get_commit_log, get_pr_data, create_csv
 from .import_to_db import fill_db
@@ -27,6 +28,8 @@ def run(config):
     ai_model = config.get("ai_description_model", "ollama|mistral")    
     summary_ai_model = config.get("ai_summary_model", "ollama|mistral")
     use_commit_desc_from_log = config.get("use_commit_desc_from_log", "False")
+    start_date = config.get("start_date", _get_oldest_commit_date(repo_owner, repo_name))
+    end_date = config.get("end_date", _get_newest_commit_date(repo_owner, repo_name))
 
     _log_master("last_started", repo_owner, repo_name, datetime.datetime.now().isoformat())
 
@@ -60,7 +63,7 @@ def run(config):
     generate_tag_annotations(repo_owner, repo_name, ai_model)
 
     logging.info("generate LLM summary core data")
-    generate_insights(repo_owner, repo_name, summary_ai_model)
+    generate_insights(repo_owner, repo_name, summary_ai_model, start_date, end_date)
 
     _log_master("last_completed", repo_owner, repo_name, datetime.datetime.now().isoformat())
 
@@ -73,6 +76,23 @@ def setup_logging(level=logging.INFO):
     Set up the logging configuration.
     """
     logging.basicConfig(level=level, format='%(asctime)s - %(levelname)s - %(message)s')    
+
+def _get_oldest_commit_date(repo_owner, repo_name):
+    conn = sqlite3.connect(f"output/{repo_owner}-{repo_name}.db")
+    cursor = conn.cursor()
+    cursor.execute('SELECT MIN(date) FROM commits')
+    oldest_date = cursor.fetchone()[0]
+    conn.close()
+    return oldest_date
+
+def _get_newest_commit_date(repo_owner, repo_name):
+    conn = sqlite3.connect(f"output/{repo_owner}-{repo_name}.db")
+    cursor = conn.cursor()
+    cursor.execute('SELECT MAX(date) FROM commits')
+    oldest_date = cursor.fetchone()[0]
+    conn.close()
+    return oldest_date
+
 
 def read_config(filename=None):
     """

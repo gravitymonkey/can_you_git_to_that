@@ -1,4 +1,4 @@
-File: {filename}
-{clause}
+File: {{filename}}
+{{clause}}
 
-{data}
+{{data}}
