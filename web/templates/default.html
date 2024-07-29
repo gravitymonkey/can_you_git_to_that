@@ -19,6 +19,9 @@
             display: flex;
             align-items: center;
         }
+        #highlight {
+            background-color: rgba(255, 255, 0, 0.33);
+        }
     </style>    
 </head>
 <body class="bg-gray-100">
@@ -50,10 +53,9 @@
                 <!-- New small column -->
                 <div class="w-1/4 bg-gray-200 p-2 rounded">
                     <!-- Content for the small column -->
-                    <p class="text-gray-500 text-xs">Date Span<BR>
-                        When generated<BR>
-                        &#10060;<BR>
-                    </p>
+                    <p class="text-gray-500 text-xs" id="author-commits-title">Commits by Author:</p>
+                    <p class="text-gray-500 text-xs" id="author-commits-datespan">&nbsp;</p>
+                    <p class="text-gray-500 text-xs" id="author-commits-service-model">&nbsp;</p>
                 </div>
                 <!-- Existing content -->
                 <div class="w-3/4 ml-4">
@@ -68,8 +70,18 @@
             <div class="bg-white p-4 rounded shadow">
                 <canvas id="file-changes-chart"></canvas>
             </div>
-            <div class="mt-4">
-                <p class="text-gray-500 text-xs" id="file-commits-summary"></p>
+            <div class="flex mt-4">
+                <!-- New small column -->
+                <div class="w-1/4 bg-gray-200 p-2 rounded">
+                    <!-- Content for the small column -->
+                    <p class="text-gray-500 text-xs" id="file-commit-count-title">Commits by Filename:</p>
+                    <p class="text-gray-500 text-xs" id="file-commit-count-datespan">&nbsp;</p>
+                    <p class="text-gray-500 text-xs" id="file-commit-count-service-model">&nbsp;</p>
+                </div>
+                <!-- Existing content -->
+                <div class="w-3/4 ml-4">
+                    <p class="text-gray-500 text-xs" id="file-commit-count-summary"></p>
+                </div>
             </div>
         </div>
 
@@ -79,36 +91,71 @@
             <div class="bg-white p-4 rounded shadow">
                 <canvas id="commits-over-time-chart"></canvas>
             </div>
-            <div class="mt-4">
-                <p class="text-gray-500 text-xs" id="commit-count-by-date-summary"></p>
+            <div class="flex mt-4">
+                <!-- New small column -->
+                <div class="w-1/4 bg-gray-200 p-2 rounded">
+                    <!-- Content for the small column -->                    
+                    <p class="text-gray-500 text-xs" id="commit-count-by-date-title">Commits Over Time:</p>
+                    <p class="text-gray-500 text-xs" id="commit-count-by-date-datespan">&nbsp;</p>
+                    <p class="text-gray-500 text-xs" id="commit-count-by-date-service-model">&nbsp;</p>
+                </div>
+                <!-- Existing content -->
+                <div class="w-3/4 ml-4">
+                    <p class="text-gray-500 text-xs" id="commit-count-by-date-summary"></p>
+                </div>
             </div>
         </div>
 
         <!-- Tags Frequency Chart with Table -->
         <div class="flex flex-wrap items-start mb-6">
             <div class="w-full md:w-1/2 bg-white p-4 rounded shadow mb-6 md:mb-0">
-                <h3 class="text-xl font-semibold mb-2">Tags Frequency</h3>
+                <h3 class="text-xl font-semibold mb-2">Development Types, Overall</h3>
                 <canvas id="tags-frequency-chart"></canvas>
             </div>
             <div class="w-full md:w-1/2 bg-white p-4 rounded shadow">
-                <h3 class="text-xl font-semibold mb-2">Tag Counts</h3>
+                <h3 class="text-xl font-semibold mb-2">Types</h3>
                 <table class="w-full text-left table-auto">
                     <tbody id="tag-count-table" style="font-size: 10px;">
                         <!-- Table rows to be dynamically inserted here -->
                     </tbody>
                 </table>
             </div>
+            <div class="flex mt-4">
+                <!-- New small column -->
+                <div class="w-1/4 bg-gray-200 p-2 rounded">
+                    <!-- Content for the small column -->
+                    <p class="text-gray-500 text-xs" id="overall-tags-title">Development Types, Overall:</p>
+                    <p class="text-gray-500 text-xs" id="overall-tags-datespan">&nbsp;</p>
+                    <p class="text-gray-500 text-xs" id="overall-tags-service-model">&nbsp;</p>
+                </div>
+                <!-- Existing content -->
+                <div class="w-3/4 ml-4">
+                    <p class="text-gray-500 text-xs" id="overall-tags-summary"></p>
+                </div>
+            </div>
+
         </div>
 
         <!-- Commits by Tag Week Chart -->
         <div class="mb-6">
-            <h3 class="text-xl font-semibold mb-2">Commits by Tag per Week</h3>
+            <h3 class="text-xl font-semibold mb-2">Development Type, By Week</h3>
             <div class="bg-white p-4 rounded shadow">
                 <canvas id="commits-by-tag-week-chart"></canvas>
             </div>
-            <div class="mt-4">
-                <p class="text-gray-700">Explanation of the commits by tag per week...</p>
+            <div class="flex mt-4">
+                <!-- New small column -->
+                <div class="w-1/4 bg-gray-200 p-2 rounded">
+                    <!-- Content for the small column -->
+                    <p class="text-gray-500 text-xs" id="tags-by-week-title">Development Types, By Week:</p>
+                    <p class="text-gray-500 text-xs" id="tags-by-week-datespan">&nbsp;</p>
+                    <p class="text-gray-500 text-xs" id="tags-by-week-service-model">&nbsp;</p>
+                </div>
+                <!-- Existing content -->
+                <div class="w-3/4 ml-4">
+                    <p class="text-gray-500 text-xs" id="tags-by-week-summary"></p>
+                </div>
             </div>
+
         </div>
 
         <!-- Pull Requests List -->
@@ -130,19 +177,26 @@
                     </tbody>
                 </table>
             </div>
-            <div class="mt-4">
-                <p class="text-gray-700">Explanation of the recent pull requests...</p>
-            </div>
         </div>
 
         <!-- File Changes Chart -->
         <div class="mb-6">
-            <h3 class="text-xl font-semibold mb-2">File Changes</h3>
+            <h3 class="text-xl font-semibold mb-2">File Churn</h3>
             <div class="bg-white p-4 rounded shadow">
                 <div id="file-sunburst" style="width: 100%;"></div>
             </div>
-            <div class="mt-4">
-                <p class="text-gray-700">Explanation of the file changes over time...</p>
+            <div class="flex mt-4">
+                <!-- New small column -->
+                <div class="w-1/4 bg-gray-200 p-2 rounded">
+                    <!-- Content for the small column -->
+                    <p class="text-gray-500 text-xs" id="file-churn-title">File Churn:</p>
+                    <p class="text-gray-500 text-xs" id="file-churn-datespan">&nbsp;</p>
+                    <p class="text-gray-500 text-xs" id="file-churn-service-model">&nbsp;</p>
+                </div>
+                <!-- Existing content -->
+                <div class="w-3/4 ml-4">
+                    <p class="text-gray-500 text-xs" id="file-churn-summary"></p>
+                </div>
             </div>
         </div>
     </div>

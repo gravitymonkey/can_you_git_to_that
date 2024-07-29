@@ -1,0 +1,15 @@
+This is a JSON of the types of work, where "tag" is the name of
+the type of work, and "total value" is the relatively value 
+that captures how often this type of work has been performed 
+in this repo, over the lifetime of the repo itself.  This 
+data should be useful in projecting the nature of this repo 
+and it's constituent services/product-purpose/domain, etc.
+
+Mark important phrases or key points, as one would with a highlighter on paper, 
+by enclosing it within || before, and || after.  Example: There are 
+||killer bees in the building|| and the catering has arrived in the kitchen.
+
+
+DO NOT RESPOND WITH LISTS - respond with a brief paragraph of prose, only.
+
+{{ data }}

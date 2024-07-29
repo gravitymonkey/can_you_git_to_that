@@ -122,47 +122,78 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function createFileChangesOverTimeChart(idata) {
-        timescale = idata.type
-        display_timescale = "day"
-        if (timescale == 'Week'){
-            display_timescale = "week"
+        timescale = idata.type;
+        display_timescale = "day";
+        if (timescale == 'Week') {
+            display_timescale = "week";
         }
-        data = idata.data        
+        data = idata.data;
         const ctx = document.getElementById('commits-over-time-chart').getContext('2d');
         new Chart(ctx, {
             type: 'line',
             data: {
                 labels: data.map(row => row.date),
-                datasets: [{
-                    label: 'Commits by ' + timescale,
-                    data: data.map(row => ({x: row.date, y: row.commits})),
-                    backgroundColor: 'rgba(23, 38, 38, 0.5)',
-                    borderColor: 'rgba(23, 38, 38, 1)',
-                    borderWidth: 1,
-                    tension: 0.4,
-                    fill: false
-                }]
+                datasets: [
+                    {
+                        label: 'Commits',
+                        data: data.map(row => ({ x: row.date, y: row.commits })),
+                        backgroundColor: 'rgba(23, 38, 38, 0.5)',
+                        borderColor: 'rgba(23, 38, 38, 1)',
+                        borderWidth: 1,
+                        tension: 0.5,
+                        fill: false,
+                        yAxisID: 'y-commits'
+                    },
+                    {
+                        label: 'Files',
+                        data: data.map(row => ({ x: row.date, y: row.files })),
+                        backgroundColor: 'rgba(217, 137, 67, 0.5)',
+                        borderColor: 'rgba(217, 137, 67, 1)',
+                        borderWidth: 1,
+                        tension: 0.5,
+                        fill: false,
+                        yAxisID: 'y-files'
+                    }
+                ]
             },
             options: {
                 scales: {
-                    y: {
-                        beginAtZero: true
+                    'y-commits': {
+                        type: 'linear',
+                        position: 'left',
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Commits'
+                        }
+                    },
+                    'y-files': {
+                        type: 'linear',
+                        position: 'right',
+                        beginAtZero: true,
+                        grid: {
+                            drawOnChartArea: false // only want the grid lines for one axis to show up
+                        },
+                        title: {
+                            display: true,
+                            text: 'Files'
+                        }
                     },
                     x: {
-                        type: 'time', // Use 'time' instead of 'timeseries'
+                        type: 'time',
                         time: {
-                            unit: display_timescale, // Adjust the unit as needed (e.g., 'day', 'week', 'month', 'year')                            
-                            tooltipFormat: 'YYYY/MM/DD', // Format for the tooltip
+                            unit: display_timescale,
+                            tooltipFormat: 'YYYY/MM/DD',
                             displayFormats: {
-                                day: 'MM/DD', // Adjust this format as needed to match your timescale unit
+                                day: 'MM/DD',
                                 week: 'YYYY/MM/DD'
-                             }
+                            }
                         },
                         title: {
                             display: true
                         },
                         min: 'auto',
-                        offset: false   
+                        offset: false
                     }
                 }
             }
@@ -240,6 +271,14 @@ const colorMap = {
         borderColor: 'rgba(204, 204, 204, 1)'
     }
 };
+
+function highlightText(input) {
+    input = String(input);
+    // Use a regular expression to replace || with <span id='highlight'>
+    // This regex uses a capture group to keep the content between the || markers
+    return input.replace(/\|\|(.*?)\|\|/g, "<span id='highlight'>$1</span>");
+}
+
 
 function createTagsFrequencyChart(data) {
     const ctx = document.getElementById('tags-frequency-chart').getContext('2d');
@@ -324,7 +363,7 @@ async function fetchInsightsSummary(which) {
     });
 
     const data = await response.json();
-    return data.summary; // Assuming the server returns an object with a 'summary' field
+    return data; // Assuming the server returns an object with a 'summary' field
 }
 
     // Add new create function for the stacked bar chart
@@ -470,7 +509,7 @@ async function fetchInsightsSummary(which) {
             tdUser.classList.add('px-4', 'py-2', 'border');
             tdFileCount.textContent = row.file_count;
             tdFileCount.classList.add('px-4', 'py-2', 'border');
-            tdDescription.innerHTML = row.description;
+            tdDescription.innerHTML = highlightText(row.description);
             tdDescription.classList.add('px-4', 'py-2', 'border', 'overflow-hidden', 'max-h-3');
 
             tr.appendChild(tdDate);
@@ -521,13 +560,6 @@ async function fetchInsightsSummary(which) {
         });    
     });    
 
-//    fetchTagsFrequency(true).then(data => {
-//        populateTagCountTable(data);
-//    });   
-    
-//    fetchCommitsByTagWeek().then(data => {
-//        createCommitsByTagWeekChart(data);
-//    });    
 
     fetchPullRequests().then(data => {
         createPullRequestsChart(data, startAt);
@@ -554,16 +586,40 @@ async function fetchInsightsSummary(which) {
     }  
 
     
-    fetchInsightsSummary('author-commits-summary').then(summary => {
-        document.getElementById('author-commits-summary').textContent = summary;
+    fetchInsightsSummary('author-commits-summary').then(data => {
+        document.getElementById('author-commits-summary').innerHTML = highlightText(data.summary);
+        document.getElementById('author-commits-datespan').innerHTML = String(data.startAt) + " - " + String(data.endAt);
+        document.getElementById('author-commits-service-model').innerHTML = "Summary: " + String(data.service) + " " + String(data.model);
     });
 
-//    fetchInsightsSummary('file-commits-summary').then(summary => {
-//        document.getElementById('file-commits-summary').textContent = summary;
-//    });
+    fetchInsightsSummary('file-commit-count-summary').then(data => {
+        document.getElementById('file-commit-count-summary').innerHTML = highlightText(data.summary);
+        document.getElementById('file-commit-count-datespan').innerHTML = String(data.startAt) + " - " + String(data.endAt);
+        document.getElementById('file-commit-count-service-model').innerHTML = "Summary: " + String(data.service) + " " + String(data.model);
+    });
 
-    fetchInsightsSummary('commit-count-by-date-summary').then(summary => {
-        document.getElementById('commit-count-by-date-summary').textContent = summary;
+    fetchInsightsSummary('commit-count-by-date-summary').then(data => {
+        document.getElementById('commit-count-by-date-summary').innerHTML = highlightText(data.summary);
+        document.getElementById('commit-count-by-date-datespan').innerHTML = String(data.startAt) + " - " + String(data.endAt);
+        document.getElementById('commit-count-by-date-service-model').innerHTML = "Summary: " + String(data.service) + " " + String(data.model);
+    });
+
+    fetchInsightsSummary('overall-tags-summary').then(data => {
+        document.getElementById('overall-tags-summary').innerHTML = highlightText(data.summary);
+        document.getElementById('overall-tags-datespan').innerHTML = String(data.startAt) + " - " + String(data.endAt);
+        document.getElementById('overall-tags-service-model').innerHTML = "Summary: " + String(data.service) + " " + String(data.model);
+    });
+
+    fetchInsightsSummary('tags-by-week-summary').then(data => {
+        document.getElementById('tags-by-week-summary').innerHTML = highlightText(data.summary);
+        document.getElementById('tags-by-week-datespan').innerHTML = String(data.startAt) + " - " + String(data.endAt);
+        document.getElementById('tags-by-week-service-model').innerHTML = "Summary: " + String(data.service) + " " + String(data.model);
+    });
+
+    fetchInsightsSummary('churn-summary').then(data => {
+        document.getElementById('file-churn-summary').innerHTML = highlightText(data.summary);
+        document.getElementById('file-churn-datespan').innerHTML = String(data.startAt) + " - " + String(data.endAt);
+        document.getElementById('file-churn-service-model').innerHTML = "Summary: " + String(data.service) + " " + String(data.model);
     });
 
 

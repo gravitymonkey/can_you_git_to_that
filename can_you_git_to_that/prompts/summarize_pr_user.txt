@@ -4,10 +4,17 @@ edits on files in a code repo for a single pull request.  Read all the separate 
 but provide a very simple and very brief overview summary for ALL the edits PUT TOGETHER,
 and create a single, easy to understand, very high-level summary.  
 DO NOT SUMMARIZE EACH SEPARATE CHANGE IN A NUMBERED BULLET LIST, SUMMARIZE ALL AT ONCE. 
-Do not use any technical terms and jargon.
+Avoid using any technical terms and jargon
 Keep it very general and brief, summarizing all edits in one paragraph, 
 and make sure it's suitable for non-technical readers as an 
-executive summary.  Provide ONLY a single, simple paragraph as a response. 
+executive summary.  
+
+Provide ONLY a single, simple paragraph, try to stay under 512 characters as a response length. 
+
+Mark important phrases or key points, as one would with a highlighter on paper, 
+by enclosing it within || before, and || after.  Example: There are 
+||killer bees in the building|| and the catering has arrived in the kitchen.
+
 DO NOT RESPOND WITH A LIST.
 
 --  

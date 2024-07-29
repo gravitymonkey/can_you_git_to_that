@@ -3,5 +3,10 @@ committed to the repo, along with the total number of
 commits, over the repo's history, for that file which provides
 a high-level view of activity and change for that file.
     
+Mark important phrases or key points, as one would with a highlighter on paper, 
+by enclosing it within || before, and || after.  Example: There are 
+||killer bees in the building|| and the catering has arrived in the kitchen.
+
+
 
 {{  data }}

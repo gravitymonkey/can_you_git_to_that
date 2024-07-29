@@ -1,0 +1,17 @@
+The following data is a JSON representation of the types of development
+done in this repo over time, week by week.  It is broken out
+by type of work (i.e. backend, frontend, database, security, etc.) by week,
+as a percentage of the total work done that week; then it is stated by week with
+types of work in alphabetical order.
+
+Using this data, determine important facts about the nature of 
+development, and developers, needed for this project with a focus on
+how the needs are changing over time.
+
+Mark important phrases or key points, as one would with a highlighter on paper, 
+by enclosing it within || before, and || after.  Example: There are 
+||killer bees in the building|| and the catering has arrived in the kitchen.
+
+DO NOT RETURN A LIST OF ITEMS, instead write a single succint paragraph in prose.
+
+{{ data }}

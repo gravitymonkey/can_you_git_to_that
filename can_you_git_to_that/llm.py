@@ -31,6 +31,7 @@ def summarize_diff(filename, diff, file_sample, ai_service, ai_model):
     prompt = get_prompt('summarize_diff_user.txt', user_prompt_prompts)
     
     num_tokens = num_tokens_from_string(prompt)
+    
     logging.info("summarize diff has prompt w/num tokens: %s", num_tokens)
 
     client = OpenAI(

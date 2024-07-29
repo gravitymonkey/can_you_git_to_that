@@ -118,6 +118,10 @@ def _create_summaries_table(conn):
             name TEXT,
             hash TEXT,
             summary TEXT,
+            ai_service TEXT,
+            ai_model TEXT,
+            start_date DATE,
+            end_date DATE,
             createdAt DATE,
             UNIQUE(name, hash)
         )
