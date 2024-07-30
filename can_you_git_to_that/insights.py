@@ -3,78 +3,35 @@ import sqlite3
 import json
 import hashlib
 from .llm_config import get_base_url, get_key, get_prompt, num_tokens_from_string
+from .llm import generate_summary
 import logging
 from datetime import datetime, timedelta
 
 from collections import defaultdict
 
-
 def generate_insights(repo_owner, repo_name, ai_model, start_date, end_date):
-    ai_service = ai_model.split("|")[0]
-    model = ai_model.split("|")[1]
-    _generate_author_commit_count_summary(repo_owner, repo_name, ai_service, model, start_date, end_date)
-    _generate_file_commit_count_summary(repo_owner, repo_name, ai_service, model, start_date, end_date)   
-    _generate_commit_count_by_date_summary(repo_owner, repo_name, ai_service, model, start_date, end_date)
-    _generate_overall_tags_summary(repo_owner, repo_name, ai_service, model,start_date, end_date)
-    _generate_tags_by_week_summary(repo_owner, repo_name, ai_service, model,start_date, end_date)
-    _generate_churn_summary(repo_owner, repo_name, ai_service, model, start_date, end_date)
+    ai_service, model = ai_model.split("|")
+    summaries = [
+        ("author-commits-summary", _get_author_commit_count, "author_commit_count_summary"),
+        ("file-commit-count-summary", _get_file_commit_count, "file_commit_count_summary"),
+        ("commit-count-by-date-summary", _get_commit_count_by_date, "commit_count_by_date_summary"),
+        ("overall-tags-summary", _get_overall_tags, "overall_tags_summary"),
+        ("tags-by-week-summary", _get_tags_by_week, "tags_by_week_summary"),
+        ("churn-summary", _get_churn, "churn_summary"),
+    ]
 
-def _generate_author_commit_count_summary(repo_owner, repo_name, ai_service, model, start_date, end_date):
-    author_data = _get_author_commit_count(repo_owner, repo_name)
-    author_data_hash = _generate_hash(author_data) #author_data should be json string
-    if not _commit_hash_exists("author-commits-summary", author_data_hash, repo_owner, repo_name):
-        author_data_summary = _generate_summary("author_commit_count_summary", author_data, ai_service, model)
-        _save_summary("author-commits-summary", author_data_summary, repo_owner, repo_name, author_data_hash, ai_service, model, start_date, end_date)
+    for summary_name, data_func, summary_type in summaries:
+        _generate_summary(repo_owner, repo_name, ai_service, model, start_date, end_date, summary_name, data_func, summary_type)
+
+def _generate_summary(repo_owner, repo_name, ai_service, model, start_date, end_date, summary_name, data_func, summary_type):
+    data = data_func(repo_owner, repo_name)
+    data_hash = _generate_hash(data)
+    
+    if not _commit_hash_exists(summary_name, data_hash, repo_owner, repo_name):
+        data_summary = generate_summary(summary_type, data, ai_service, model)
+        _save_summary(summary_name, data_summary, repo_owner, repo_name, data_hash, ai_service, model, start_date, end_date)
     else:
-        logging.info("Author commit count summary already exists for author-commits-summary with same author data")
-
-def _generate_file_commit_count_summary(repo_owner, repo_name, ai_service, model, start_date, end_date):   
-    file_data = _get_file_commit_count(repo_owner, repo_name)
-    file_data_hash = _generate_hash(file_data) 
-    if not _commit_hash_exists("file-commit-count-summary", file_data_hash, repo_owner, repo_name):
-        file_data_summary = _generate_summary("file_commit_count_summary", file_data, ai_service, model)
-        _save_summary("file-commit-count-summary", file_data_summary, repo_owner, repo_name, file_data_hash, ai_service, model, start_date, end_date)
-    else:
-        logging.info("File commit count summary already exists for file-commit-count-summary with same file data")
-
-
-def _generate_commit_count_by_date_summary(repo_owner, repo_name, ai_service, model, start_date, end_date):
-    commit_data = _get_commit_count_by_date(repo_owner, repo_name)
-    commit_data_hash = _generate_hash(commit_data) 
-    if not _commit_hash_exists("commit-count-by-date-summary", commit_data_hash, repo_owner, repo_name):
-        commit_data_summary = _generate_summary("commit_count_by_date_summary", commit_data, ai_service, model)
-        _save_summary("commit-count-by-date-summary", commit_data_summary, repo_owner, repo_name, commit_data_hash, ai_service, model, start_date, end_date)
-    else:
-        logging.info("Commit count by date summary already exists for commit-counts-by-date-summary with same commit data")
-
-def _generate_overall_tags_summary(repo_owner, repo_name, ai_service, model, start_date, end_date):
-    tag_data = _get_overall_tags(repo_owner, repo_name)
-    tag_data_hash = _generate_hash(tag_data) 
-    if not _commit_hash_exists("overall-tags-summary", tag_data_hash, repo_owner, repo_name):
-        tag_data_summary = _generate_summary("overall_tags_summary", tag_data, ai_service, model)
-        _save_summary("overall-tags-summary", tag_data_summary, repo_owner, repo_name, tag_data_hash, ai_service, model, start_date, end_date)
-    else:
-        logging.info("Tags summary already exists for overall-tags-summary with same source data")
-
-def _generate_tags_by_week_summary(repo_owner, repo_name, ai_service, model, start_date, end_date):
-    tag_data = _get_tags_by_week(repo_owner, repo_name)
-    print(tag_data)
-    tag_data_hash = _generate_hash(tag_data) 
-    print(tag_data_hash)
-    if not _commit_hash_exists("tags-by-week-summary", tag_data_hash, repo_owner, repo_name):
-        tag_data_summary = _generate_summary("tags_by_week_summary", tag_data, ai_service, model)
-        _save_summary("tags-by-week-summary", tag_data_summary, repo_owner, repo_name, tag_data_hash, ai_service, model, start_date, end_date)
-    else:
-        logging.info("Tags-by-week summary already exists for tags-by-week-summary with same source data")
-
-def _generate_churn_summary(repo_owner, repo_name, ai_service, model, start_date, end_date):
-    churn_data = _get_churn(repo_owner, repo_name)
-    churn_data_hash = _generate_hash(churn_data) 
-    if not _commit_hash_exists("churn-summary", churn_data_hash, repo_owner, repo_name):
-        churn_data_summary = _generate_summary("churn_summary", churn_data, ai_service, model)
-        _save_summary("churn-summary", churn_data_summary, repo_owner, repo_name, churn_data_hash, ai_service, model, start_date, end_date)
-    else:
-        logging.info("Churn summary already exists for churn-summary with same source data")
+        logging.info(f"{summary_name.replace('-', ' ').capitalize()} already exists with the same data")
 
 def _get_overall_tags(repo_owner, repo_name):
     conn = sqlite3.connect(f"output/{repo_owner}-{repo_name}.db")
@@ -353,25 +310,3 @@ def _get_author_commit_count(repo_parent, repo_name):
         rows.append(row_data)
     
     return json.dumps(rows, indent=4)    
-
-def _generate_summary(which, data, service_name, model_name):
-    system = get_prompt(f'{which}_system.txt', {})
-
-    prompt_props = {"data": data}
-    prompt = get_prompt(f'{which}_user.txt', prompt_props)
-    num_tokens = num_tokens_from_string(prompt)
-    logging.info("insights generate summary has prompt w/num tokens: %s", num_tokens)
-
-    client = OpenAI(
-        base_url = get_base_url(service_name),
-        api_key= get_key(service_name),
-    )
-    response = client.chat.completions.create(
-        model=model_name,
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0.2
-    )
-    return response.choices[0].message.content 

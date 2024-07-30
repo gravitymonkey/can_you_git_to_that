@@ -1,0 +1,36 @@
+{
+    "openai":{
+        "gpt-4o-mini": {
+            "input": 0.150,
+            "output": 0.600
+        },
+        "gpt-4o-mini-2024-07-18": {
+            "input": 0.150,
+            "output": 0.600
+        },
+        "gpt-4-turbo": {
+            "input": 10.00,
+            "output": 30.00
+        },
+        "gpt-4": {
+            "input": 30.00,
+            "output": 60.00
+        },
+        "gpt-3.5-turbo-0125": {
+            "input": 0.50,
+            "output": 1.50
+        }
+    },
+    "ollama":{
+        "mistral": {
+            "input": 0.0,
+            "output": 0.0
+        },
+        "mistral-8K": {
+            "input": 0.0,
+            "output": 0.0
+        }
+    }
+}
+
+

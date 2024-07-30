@@ -17,7 +17,7 @@ context on the project's history, development processes, as well as the lifecycl
 
 <A HREF="assets/screenshot_7_29_2024.png"><IMG SRC="assets/mini_screenshot_7_29_2024.png" width=400 alt="screenshot of a simple repo, this one"></A>
 
-The screenshot, above, is a representative view of the output from this project.  Click to see the full screenshot.
+The screenshot, above, is a representative view of the output from this repo.  Click to see the full screenshot. 
 
 ## How does it work?
 
@@ -25,7 +25,7 @@ First, copy/clone the repo to your local directory.  Currently tested under Pyth
 
 To run it, modify the settings in the tab-delimited `config.txt`. This file, `example.py`, is a bare-bones example to show you the paths and includes needed to run the app. You can run it with `python3 example.py` within the root of your local copy of the repo.
 
-What's gonna happen?  Well, first, the app reads `config.txt` and collects and generates a bunch of data about your repo.  To collect data, it uses <a href="https://github.com/PyGithub/PyGithub">PyGithub</a> to query the Github API (you'll need a Github personal access token, more info below), ultimately moving that data into a Sqlite database in the `output` directory.  To generate, the app uses an LLM (either OpenAI or Ollama, as configured in `config.txt`) to generate plain-language summaries (of commit diffs) and to classify and tag file changes, and store them in the database.
+What's gonna happen?  Well, first, the app reads `config.txt` and collects and generates a bunch of data about your repo.  To collect data, it uses <a href="https://github.com/PyGithub/PyGithub">PyGithub</a> to query the Github API (you'll need a Github personal access token, more info below), ultimately moving that data into a Sqlite database in the `output` directory.  To generate, the app uses an LLM (either OpenAI or Ollama, as configured in `config.txt`) to generate plain-language summaries (of commit diffs) and to classify and tag file changes, and store them in the database.  The approximate accrued cost of your LLM usage is calculated and show via logging output -- as a reference, to generate the example screenshot above, and processing this repo and it's changes solely using `gpt-4o-mini` (7/2024) via API cost just under $0.04 to process.
 
 Once this process completes succesfully, the next step is to run `flask --app server run` from the `web` directory, which will serve reports from <a href="http://127.0.0.1:5000">http://127.0.0.1:5000</A>.
 

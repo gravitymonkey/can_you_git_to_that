@@ -143,12 +143,16 @@ def get_pr_data(access_token, repo_owner, repo_name):
     return filename
 
 def _get_existing_pr_numbers(repo_owner, repo_path):
-    conn = sqlite3.connect(f"output/{repo_owner}-{repo_path}.db")    
-    cursor = conn.cursor()
-    cursor.execute("SELECT number FROM pull_requests")
-    result = cursor.fetchall()
-    conn.close()
-    return [x[0] for x in result]
+    try:
+        conn = sqlite3.connect(f"output/{repo_owner}-{repo_path}.db")    
+        cursor = conn.cursor()
+        cursor.execute("SELECT number FROM pull_requests")
+        result = cursor.fetchall()
+        conn.close()
+        return [x[0] for x in result]
+    except Exception as e:
+        logging.error("Error getting existing PR numbers: %s", e)
+        return []
 
 def create_csv(repo_parent, repo_name, log_filename, exclude_file_pattern="", exclude_author_pattern=""):
     """

@@ -6,7 +6,7 @@ from .export_git import get_commit_log, get_pr_data, create_csv
 from .import_to_db import fill_db
 from .annotate_commits import generate_descriptions, generate_pr_descriptions, generate_tag_annotations, backfill_descriptions_from_log
 from .insights import generate_insights
-from .llm_config import get_base_url, get_key
+from .llm_config import get_base_url, get_key, init_cost_tracker
 
 def run(config):
 
@@ -52,6 +52,11 @@ def run(config):
     logging.info("calling backfilling descriptions from log")
     backfill_descriptions_from_log(repo_owner, repo_name, use_commit_desc_from_log)    
 
+    logging.info("init cost tracker")
+    cost_to_date = init_cost_tracker(repo_owner, repo_name)
+    logging.info("Historical LLM API cost for %s to date: $%s", repo_name, cost_to_date)
+    # add logic here to close if we're over a certain amount of total cost
+
     logging.info("Generating commit diff descriptions")
     generate_descriptions(access_token, repo_owner, repo_name, max_summary_length, ai_model)
 
@@ -63,6 +68,10 @@ def run(config):
     generate_tag_annotations(repo_owner, repo_name, ai_model)
 
     logging.info("generate LLM summary core data")
+    if start_date is None:
+        start_date = _get_oldest_commit_date(repo_owner, repo_name)
+    if end_date is None:
+        end_date = _get_newest_commit_date(repo_owner, repo_name)
     generate_insights(repo_owner, repo_name, summary_ai_model, start_date, end_date)
 
     _log_master("last_completed", repo_owner, repo_name, datetime.datetime.now().isoformat())
@@ -78,20 +87,28 @@ def setup_logging(level=logging.INFO):
     logging.basicConfig(level=level, format='%(asctime)s - %(levelname)s - %(message)s')    
 
 def _get_oldest_commit_date(repo_owner, repo_name):
-    conn = sqlite3.connect(f"output/{repo_owner}-{repo_name}.db")
-    cursor = conn.cursor()
-    cursor.execute('SELECT MIN(date) FROM commits')
-    oldest_date = cursor.fetchone()[0]
-    conn.close()
-    return oldest_date
+    try:
+        conn = sqlite3.connect(f"output/{repo_owner}-{repo_name}.db")
+        cursor = conn.cursor()
+        cursor.execute('SELECT MIN(date) FROM commits')
+        oldest_date = cursor.fetchone()[0]
+        conn.close()
+        return oldest_date
+    except Exception as e:
+        logging.error("Error getting oldest commit date: %s", e)
+        return None
 
 def _get_newest_commit_date(repo_owner, repo_name):
-    conn = sqlite3.connect(f"output/{repo_owner}-{repo_name}.db")
-    cursor = conn.cursor()
-    cursor.execute('SELECT MAX(date) FROM commits')
-    oldest_date = cursor.fetchone()[0]
-    conn.close()
-    return oldest_date
+    try:
+        conn = sqlite3.connect(f"output/{repo_owner}-{repo_name}.db")
+        cursor = conn.cursor()
+        cursor.execute('SELECT MAX(date) FROM commits')
+        newest_date = cursor.fetchone()[0]
+        conn.close()
+        return newest_date
+    except Exception as e:
+        logging.error("Error getting newest commit date: %s", e)
+        return None
 
 
 def read_config(filename=None):

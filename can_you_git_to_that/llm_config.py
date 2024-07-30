@@ -1,6 +1,9 @@
 import os
 import tiktoken
+import json
 from jinja2 import Environment, FileSystemLoader
+
+LLM_PRICING = {}
 
 def _get_template_env():
     # Specify the templates directory
@@ -35,4 +38,36 @@ def num_tokens_from_string(value):
     num_tokens = len(encoding.encode(value))
     return num_tokens
 
+def init_cost_tracker(repo_parent, repo_name):
+    filename = f"output/{repo_parent}-{repo_name}_cost_tracker.txt"
+    global LLM_PRICING 
+    LLM_PRICING = _load_pricing(filename)
+    # read and total all the values
+    total_cost_to_date = 0
+    if os.path.exists(filename):
+        f = open(filename, "r", encoding="utf-8")
+        data = f.readlines()
+        f.close()
+        for row in data:
+            row = row.strip()
+            if not row.startswith("#"):
+                cells = row.split("\t")
+                #date model input output cost
+                if len(cells) > 4:
+                    total_cost_to_date += float(cells[4])
+    else:
+        f = open(filename, "w", encoding="utf-8")
+        f.write("#date\tmodel\tinput\toutput\tcost\n")
+        f.close()
+    return total_cost_to_date
+        
+def _load_pricing(filename):
+    with open('llm_pricing.json', encoding='utf-8') as f:
+        data = json.load(f)
+    pricing = {}
+    pricing['logfile'] = filename
+    pricing['prices'] = data
+    return pricing
 
+def get_LLM_pricing():
+    return LLM_PRICING
