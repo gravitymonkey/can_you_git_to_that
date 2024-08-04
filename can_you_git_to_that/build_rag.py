@@ -33,7 +33,7 @@ def _rag_exists(dir_name, subdirs):
 
     return index_exists
 
-def build_rag(force_rebuild_rag, repo_full_path, repo_name):
+def _build_rag(force_rebuild_rag, repo_full_path, repo_name):
     try:
         logging.info("force rebuild rag: %s; repo_full_path: %s", force_rebuild_rag, repo_full_path)
         dir_name = f"../output/{repo_name}_rag"
@@ -95,9 +95,9 @@ def build_rag(force_rebuild_rag, repo_full_path, repo_name):
         traceback.print_exc()
         raise e
 
-def init_rag(full_path, repo_name):
+def init_rag(force_rebuild, full_path, repo_name):
     global query_engine
-    query_engine = build_rag(False, full_path, repo_name)  # Force rebuild for testing
+    query_engine = _build_rag(force_rebuild, full_path, repo_name)  # Force rebuild for testing
 
 def get_rag():
     return query_engine
