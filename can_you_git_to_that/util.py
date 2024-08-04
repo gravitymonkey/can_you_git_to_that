@@ -7,6 +7,7 @@ from .import_to_db import fill_db
 from .annotate_commits import generate_descriptions, generate_pr_descriptions, generate_tag_annotations, backfill_descriptions_from_log
 from .insights import generate_insights
 from .llm_config import get_base_url, get_key, init_cost_tracker
+from .build_rag import init_rag
 
 def run(config):
 
@@ -14,11 +15,7 @@ def run(config):
     repo_name = config["repo_name"]
     repo_owner = config["repo_owner"]
     access_token = config["github_access_token"]
-
-# to do - remove local path is we don't need it, or maybe we ultimately have
-#   local vs API as a setup option (although that would require a bunch of changes
-#   to the product and the output)
-#    repo_local_full_path = config["repo_local_full_path"]
+    repo_local_full_path = config["repo_local_full_path"]
     
 
     # these values can be blank or missing
@@ -73,6 +70,10 @@ def run(config):
     if end_date is None:
         end_date = _get_newest_commit_date(repo_owner, repo_name)
     generate_insights(repo_owner, repo_name, summary_ai_model, start_date, end_date)
+
+    logging.info("init rag")
+    init_rag(True, repo_local_full_path, repo_name)
+
 
     _log_master("last_completed", repo_owner, repo_name, datetime.datetime.now().isoformat())
 

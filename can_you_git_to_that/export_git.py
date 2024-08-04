@@ -1,9 +1,11 @@
 import os
 import logging
 import sqlite3
-from github import Github 
+from github import Github, GithubException
 import re
 from datetime import datetime
+import time
+from tqdm import tqdm
 
 
 
@@ -19,52 +21,70 @@ def get_commit_log(github_access_token, repo_owner, repo_name):
     Returns:
         str: The file path of the output file.
     """
-    # Initialize the GitHub object
-    g = Github(github_access_token)
+    try:
+        # Initialize the GitHub object
+        g = Github(github_access_token)
 
-    # Get the repository
-    repo = g.get_repo(f"{repo_owner}/{repo_name}")
+        # Get the repository
+        full_repo_name = f"{repo_owner}/{repo_name}"
+        logging.info("Getting repository: %s", full_repo_name)
+        repo = g.get_repo(full_repo_name)
 
-    # Fetch all commits
-    commits = repo.get_commits()
+        # Fetch all commits
 
-    # Get the directory of the current script
-    script_directory = os.path.dirname(os.path.abspath(__file__))
-    parent_directory = os.path.dirname(script_directory)
+        # Determine the number of commits
+        total_commits = repo.get_commits().totalCount
+        logging.info("Total number of commits: %d", total_commits)
 
-    # Define the output folder relative to the execution location
-    output_folder = os.path.join(parent_directory, 'output')
-    # Ensure the output folder exists
-    os.makedirs(output_folder, exist_ok=True)
+        # Fetch all commits and show loading status
+        commits = repo.get_commits()
 
-    # Define the output file path
-    output_file_path = os.path.join(output_folder, f"{repo_owner}-{repo_name}_git_log.txt")
+        
+        # Get the directory of the current script
+        script_directory = os.path.dirname(os.path.abspath(__file__))
+        parent_directory = os.path.dirname(script_directory)
 
-    output = ""
-    counter = 0
-    logging.info("Processing commits")
-    for commit in commits:
-        commit_data = commit.commit
-        commit_message = commit_data.message
-        commit_message = commit_message.replace("\n", " ")
-        commit_message = commit_message.replace("--", " ")
-        author = commit_data.author
-        author_name = author.name if author else "Unknown"
-        author_email = author.email if author else "Unknown"
-        line = f"^^{commit.sha}--{commit_data.author.date.timestamp()}--{commit_data.author.date.isoformat()}--{author_name}--{author_email}--{commit_message}\n"
-        output += line
-        for file in commit.files:
-            output += f"{file.additions}\t{file.deletions}\t{file.filename}\n"
-        output += "\n"
-        if (counter / 10 % 100) == 0 and counter > 0:
-            logging.info("Processing commit: %s", counter)
-        counter += 1
+        # Define the output folder relative to the execution location
+        output_folder = os.path.join(parent_directory, 'output')
+        # Ensure the output folder exists
+        os.makedirs(output_folder, exist_ok=True)
 
-    # Write the output to the file
-    with open(output_file_path, "w", encoding="utf-8") as output_file:
-        output_file.write(output)
+        # Define the output file path
+        output_file_path = os.path.join(output_folder, f"{repo_owner}-{repo_name}_git_log.txt")
 
-    return output_file_path
+        output = ""
+        counter = 0
+        logging.info("Processing commits")
+        with tqdm(total=total_commits, desc="Loading Commits") as pbar:
+            for commit in commits:
+                commit_data = commit.commit
+                commit_message = commit_data.message
+                commit_message = commit_message.replace("\n", " ")
+                commit_message = commit_message.replace("--", " ")
+                author = commit_data.author
+                author_name = author.name if author else "Unknown"
+                author_email = author.email if author else "Unknown"
+                line = f"^^{commit.sha}--{commit_data.author.date.timestamp()}--{commit_data.author.date.isoformat()}--{author_name}--{author_email}--{commit_message}\n"
+                output += line
+                for file in commit.files:
+                    output += f"{file.additions}\t{file.deletions}\t{file.filename}\n"
+                output += "\n"
+                counter += 1
+                pbar.update(1)
+
+
+        # Write the output to the file
+        with open(output_file_path, "w", encoding="utf-8") as output_file:
+            output_file.write(output)
+
+        return output_file_path
+    except GithubException as ge:
+        logging.error("Error getting repository: %s", ge)
+        logging.error("Can't reach this repo - you may not have access to it with ")
+        return None
+    except Exception as e:
+        logging.error("Error getting commit log: %s", e)
+        return None
 
 
 
@@ -90,7 +110,8 @@ def get_pr_data(access_token, repo_owner, repo_name):
     for pr in prs:
         if pr.number not in existing_pr_numbers:
             pulls.append(pr)
-    
+    num_pulls = len(pulls)
+
     # Iterate through pull requests and print details
     # column names
     column_names = [
@@ -113,29 +134,31 @@ def get_pr_data(access_token, repo_owner, repo_name):
     output = "\t".join(column_names)+ "\n"
     counter = 0
     logging.info("Processing pull requests")
-    for pr in pulls:
-        line = ""
-        line += f"{pr.number}\t"
-        title = str(pr.title).replace("\t", " ")
-        line += f"{title}\t"
-        line += f"{pr.user.login}\t"
-        line += f"{pr.state}\t"
-        line += f"{pr.created_at}\t"
-        line += f"{pr.merged}\t"
-        line += f"{pr.merged_at}\t"
-        line += f"{pr.merge_commit_sha}\t"
-        line += f"{pr.mergeable}\t"
-        line += f"{pr.mergeable_state}\t"
-        comments = str(pr.comments).replace("\t", " ")
-        line += f"{comments}\t"
-        review_comments = str(pr.review_comments).replace("\t", " ")
-        line += f"{review_comments}\t"
-        line += f"{pr.closed_at}\t"
-        line += f"{pr.html_url}\n"
-        if (counter /10 % 100) == 0 and counter > 0:
-            logging.info("Processing pull request: %s", counter)
-        counter += 1
-        output += line
+    with tqdm(total=num_pulls, desc="Loading Pull Requests") as pbar:
+        for pr in pulls:
+            line = ""
+            line += f"{pr.number}\t"
+            title = str(pr.title).replace("\t", " ")
+            line += f"{title}\t"
+            line += f"{pr.user.login}\t"
+            line += f"{pr.state}\t"
+            line += f"{pr.created_at}\t"
+            line += f"{pr.merged}\t"
+            line += f"{pr.merged_at}\t"
+            line += f"{pr.merge_commit_sha}\t"
+            line += f"{pr.mergeable}\t"
+            line += f"{pr.mergeable_state}\t"
+            comments = str(pr.comments).replace("\t", " ")
+            line += f"{comments}\t"
+            review_comments = str(pr.review_comments).replace("\t", " ")
+            line += f"{review_comments}\t"
+            line += f"{pr.closed_at}\t"
+            line += f"{pr.html_url}\n"
+            if (counter /10 % 100) == 0 and counter > 0:
+                logging.info("Processing pull request: %s", counter)
+            counter += 1
+            output += line
+            pbar.update(1)
 
     filename = f"./output/{repo_owner}-{repo_name}_pull_requests.txt"
     with open(filename, "w", encoding="utf-8") as output_file:

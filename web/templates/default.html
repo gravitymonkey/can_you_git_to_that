@@ -10,17 +10,34 @@
         body {
             font-family: 'Fira Code', monospace;
         }
-        .header-icon img {
-            width: 30px;
-            height: 30px;
-            border: 0px;
-        }
         .nav-container {
             display: flex;
             align-items: center;
         }
         #highlight {
             background-color: rgba(255, 255, 0, 0.33);
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #666666;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.5);
+            z-index: 1;
+            font-size: 12px;
+        }
+        .dropdown-content a {
+            color: white;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+        }
+        .dropdown-content a:hover {
+            background-color: #465659;
+            color: #D98943;
+        }
+        .dropdown:hover .dropdown-content {
+            display: block;
         }
     </style>    
 </head>
@@ -31,14 +48,22 @@
         <div class="container mx-auto nav-container">
             <table width="100%">
                 <tr>
-                    <td><a href="/" class="header-icon">
-                        <img src="/android-chrome-512x512.png" alt="Home"></a></td>
+                    <td>
+                        <div class="dropdown">
+                            <button class="text-white">☰</button>
+                            <div class="dropdown-content">
+                                <a href="/">All Repos</a>
+                                <a href="/{{ repo_parent }}/{{ repo_name }}/query">Query {{ repo_name }}</a>
+                                </div>
+                        </div>
+                    </td>
                     <td class="text-white text-1xl ml-2">Repository Analysis: {{ repo_parent }}/{{ repo_name }}</td>
                     <td class="text-white text-1xl ml-2" style="align-items: right;">{{ startAt }} - {{ endAt }}</td>
                 </tr>
             </table>
         </div>
     </nav>
+
 
 
     <div class="container mx-auto mt-8 px-4">
