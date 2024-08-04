@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Can You Git To That</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Fira Code', monospace;
+        }
+        .header-icon img {
+            width: 16px;
+            height: 16px;
+            border: 0px;
+        }
+        .nav-container {
+            display: flex;
+            align-items: center;
+        }
+        #highlight {
+            background-color: rgba(255, 255, 0, 0.33);
+        }
+    </style>    
+</head>
+<body class="bg-gray-100">
+
+    <!-- Navigation Bar -->
+    <nav class="p-4" style="background-color: #D98943;">
+        <div class="container mx-auto nav-container">
+            <table width="100%">
+                <tr>
+                    <td>
+                        <div class="back">
+                            <a href="/{{ repo_parent}}/{{ repo_name}}" class="header-icon">
+                                <img src="/back.png" alt="Home"></a>   
+                        </div>
+                    </td>
+                    <td class="text-white text-1xl ml-2">Repository Analysis: {{ repo_parent }}/{{ repo_name }}</td>
+                    <td class="text-white text-1xl ml-2" style="align-items: right;"></td>
+                </tr>
+            </table>
+        </div>
+    </nav>
+
+    <div class="container mx-auto mt-8 px-4">
+        <!-- Chat Interface -->
+        <div class="bg-white p-4 rounded shadow">
+            <h3 class="text-xl font-semibold mb-2">Query {{ repo_name }}</h3>
+            <div class="chat-box h-64 overflow-y-scroll p-2 border rounded" id="chat-box">
+                <!-- Chat messages will be appended here -->
+            </div>
+            <div class="mt-4">
+                <input type="text" id="chat-input" class="w-full p-2 border rounded" placeholder="Type your message...">
+                <button id="send-button" class="mt-2 bg-blue-500 text-white px-4 py-2 rounded">Send</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment"></script>
+    <script src="https://unpkg.com/d3"></script>
+    <script src="https://unpkg.com/sunburst-chart"></script>
+    <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
+
+    <!-- Embed parameters in a script tag -->
+    <script type="text/javascript">
+        var repoParent = "{{ repo_parent }}";
+        var repoName = "{{ repo_name }}";
+        var startAt = "{{ startAt }}";
+    </script>
+
+    <!-- Include the main.js script -->
+    <script type="text/javascript" src="{{ url_for('static', filename='main.js') }}"></script>    
+    <script type="text/javascript">
+        document.addEventListener("DOMContentLoaded", function() {
+            const chatBox = document.getElementById('chat-box');
+            const chatInput = document.getElementById('chat-input');
+            const sendButton = document.getElementById('send-button');
+            const socket = io();  // Initialize Socket.IO client
+    
+            // Function to append a message to the chat box
+            function appendMessage(message, sender) {
+                const messageElement = document.createElement('div');
+                messageElement.classList.add('p-2', 'border-b');
+                messageElement.innerHTML = `<strong>${sender}:</strong> ${message}`;
+                chatBox.appendChild(messageElement);
+                chatBox.scrollTop = chatBox.scrollHeight; // Scroll to the bottom
+            }
+    
+            // Function to disable input and button
+            function disableInput() {
+                chatInput.disabled = true;
+                sendButton.disabled = true;
+            }
+    
+            // Function to enable input and button
+            function enableInput() {
+                chatInput.disabled = false;
+                sendButton.disabled = false;
+                chatInput.focus();
+            }
+    
+            // Handle incoming messages from the server
+            socket.on('message', function(data) {
+                appendMessage(data.message, 'Bot');
+                enableInput();
+            });
+    
+            // Event listener for send button
+            sendButton.addEventListener('click', function() {
+                const message = chatInput.value;
+                if (message.trim()) {
+                    appendMessage(message, 'You');
+                    disableInput();  // Disable input and button
+                    socket.emit('message', {message: message});  // Send message to server
+                    chatInput.value = ''; // Clear the input
+                }
+            });
+    
+            // Optional: Event listener for Enter key in the input field
+            chatInput.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter') {
+                    sendButton.click();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

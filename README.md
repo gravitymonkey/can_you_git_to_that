@@ -33,15 +33,21 @@ Once this process completes succesfully, the next step is to run `flask --app se
 ## Config Details
 
 ### Github Personal Access Token
-You'll need to have a Github access token set up in your environment variables for CYGTT to work.  
+You'll need to have a Github access token set up in your environment variables to be able to get to repos that you own for CYGTT to work.  
 
-To get an access token, in the upper-right corner of any page on GitHub, click your profile photo, then click `Settings` from the dropdown menu.  On the page that appears, in the left sidebar (look all the way at the bottom of the sidebar, it's easy to overlook), click `Developer settings`. In the next left sidebar, under `Personal access tokens`, you can use the "new fine-grained personal access token" to allow specific repos.  Select the following permissions:
+To get an access token, in the upper-right corner of any page on GitHub, click your profile photo, then click `Settings` from the dropdown menu.  On the page that appears, in the left sidebar (look all the way at the bottom of the sidebar, it's easy to overlook), click `Developer settings`. In the next left sidebar, under `Personal access tokens`, you can use the "new fine-grained personal access token" to allow specific permissions, or "personal access tokens (classic)".  
+
+For `Fine-grained personal access token` select the following permissions:
 
  * Commit statuses: readonly
  * Contents: readonly
  * Pull Requests: readonly
 
-Then set the token value on your system environment as `CYGTT_GITHUB_ACCESS_TOKEN`.
+Note that if you the `Fine-grained access tokens` you may have to own the repo, as well, or ask permission to access it.
+
+Using the `Github Personal Access Token (Classic)` instead, in the same way, will seemingly let you access any repo you have permission to access via API.
+
+Then set the token value in your system environment as `CYGTT_GITHUB_ACCESS_TOKEN`.  
 
 ### Ollama setup
 

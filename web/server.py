@@ -9,10 +9,13 @@ from datetime import datetime, timedelta, date as ddate
 from isoweek import Week
 import pprint as pp
 import traceback
+import time
+from flask_socketio import SocketIO, send
 
 from flask import Flask, request, jsonify, send_from_directory, render_template
 
 app = Flask(__name__, static_url_path='', static_folder='static')
+socketio = SocketIO(app)
 
 COLORS = [ '#D98943', '#D9A78B', '#59696D', '#8CD0B6','#465659', '#7CA2A6', '#172626']
 
@@ -43,6 +46,7 @@ def serve_repo(repo_parent, repo_name):
             'repo_name': repo_name
         }
         startAt = _get_first_commit_date(args)
+        
     endAt = _get_last_run(repo_parent, repo_name)
     
     return render_template('default.html',    
@@ -50,6 +54,17 @@ def serve_repo(repo_parent, repo_name):
                             repo_name=repo_name,
                             startAt=startAt,
                             endAt=endAt)
+
+@app.route('/<repo_owner>/<repo_name>/query', methods=['GET', 'POST'])
+def query(repo_owner, repo_name):
+    return render_template('query.html', repo_parent=repo_owner, repo_name=repo_name)
+
+@socketio.on('message')
+def handle_message(data):
+    print('Received message:', data['message'])
+    time.sleep(5)
+    response = 'This is a response from the server. ' + data['message']
+    send({'message': response}, broadcast=True)
 
 # 1: Commits By Author
 @app.route('/author-commits', methods=['GET'])
@@ -584,4 +599,5 @@ def _get_db_name(request_dict):
     return f"../output/{repo_parent}-{repo_name}.db"
 
 if __name__ == '__main__':
-    app.run(debug=True)
+#    app.run(debug=True)
+    socketio.run(app, debug=True)    
