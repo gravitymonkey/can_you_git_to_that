@@ -11,15 +11,17 @@ from llama_index.core.tools import QueryEngineTool
 from llama_index.core.query_engine.router_query_engine import RouterQueryEngine
 from llama_index.core.selectors import LLMSingleSelector
 from llama_index.core import StorageContext, load_index_from_storage
+import pathspec
+import shutil
 
 logging.basicConfig(level=logging.INFO)
 
 query_engine = None
 
-class CustomOpenAI(OpenAI):
-    def _prepare_chat_with_tools(self, *args, **kwargs):
+#class CustomOpenAI(OpenAI):
+#    def _prepare_chat_with_tools(self, *args, **kwargs):
         # Implement the abstract method here.
-        pass
+#        pass
 
 def _rag_exists(dir_name, subdirs):
     index_exists = False
@@ -36,25 +38,31 @@ def _rag_exists(dir_name, subdirs):
 def _build_rag(force_rebuild_rag, repo_full_path, repo_name):
     try:
         logging.info("force rebuild rag: %s; repo_full_path: %s", force_rebuild_rag, repo_full_path)
-        dir_name = f"../output/{repo_name}_rag"
+        dir_name = f"./output/{repo_name}_rag"
         summary_index = None
         vector_index = None
 
         openai_key = os.environ.get("OPENAI_API_KEY")
-        Settings.llm = CustomOpenAI(api_key=openai_key, model="gpt-4o-mini")
+        Settings.llm = OpenAI(api_key=openai_key, model="gpt-4o-mini")
         Settings.embed_model = OpenAIEmbedding(api_key=openai_key, model="text-embedding-3-large")
 
         if force_rebuild_rag or not _rag_exists(dir_name, ["summary", "vector"]):
             logging.info("Building/rebuilding RAG")
-            documents = SimpleDirectoryReader(repo_full_path).load_data()
+
+            documents = SimpleDirectoryReader(f"./output/{repo_name}_source").load_data()
+            # read the copy of the source, so we won't read/index anything in .gitignore
             splitter = SentenceSplitter(chunk_size=1024)
             nodes = splitter.get_nodes_from_documents(documents)
+
             summary_index = SummaryIndex(nodes)
             summary_index.storage_context.persist(persist_dir=os.path.join(dir_name, 'summary'))
             vector_index = VectorStoreIndex(nodes)
             vector_index.storage_context.persist(persist_dir=os.path.join(dir_name, 'vector'))
+
+            # split the source 
+
         else:
-            # Rebuild storage context
+            # reload RAG
             logging.info("Loading RAG from storage")
             summary_storage_context = StorageContext.from_defaults(persist_dir=os.path.join(dir_name, 'summary'))
             vector_storage_context = StorageContext.from_defaults(persist_dir=os.path.join(dir_name, 'vector'))
@@ -95,8 +103,50 @@ def _build_rag(force_rebuild_rag, repo_full_path, repo_name):
         traceback.print_exc()
         raise e
 
+
+def _copy_code(full_path, repo_name):
+    try:
+        logging.info("Copy code")
+        dir_name = f"./output/{repo_name}_source"
+
+        # Empty the directory first
+        if os.path.exists(dir_name):
+            shutil.rmtree(dir_name)
+        os.makedirs(dir_name, exist_ok=True)
+
+        # Read the .gitignore file
+        gitignore_path = os.path.join(full_path, '.gitignore')
+        if os.path.exists(gitignore_path):
+            with open(gitignore_path, 'r') as f:
+                gitignore_patterns = f.read().splitlines()
+        else:
+            gitignore_patterns = []
+        gitignore_patterns.append('.git')
+
+        # Compile the gitignore patterns
+        spec = pathspec.PathSpec.from_lines('gitwildmatch', gitignore_patterns)
+
+        for root, dirs, files in os.walk(full_path):
+            for file in files:
+                file_path = os.path.relpath(os.path.join(root, file), full_path)
+                # Check if the file matches any of the gitignore patterns
+                if not spec.match_file(file_path):
+                    # Determine the destination path
+                    dest_path = os.path.join(dir_name, file_path)
+                    # Create the destination directory if it doesn't exist
+                    os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+                    # Copy the file
+                    shutil.copy2(os.path.join(root, file), dest_path)
+                    logging.info(f"Copied {file_path} to {dest_path}")
+
+    except Exception as e:
+        logging.error("Error copying code: %s", e)
+        traceback.print_exc()
+        raise e
+    
 def init_rag(force_rebuild, full_path, repo_name):
     global query_engine
+    _copy_code(full_path, repo_name) # we'll always copy and segment the code, if we rebuild the RAG that will trigger in _build_rag
     query_engine = _build_rag(force_rebuild, full_path, repo_name)  # Force rebuild for testing
 
 def get_rag():

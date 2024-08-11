@@ -11,19 +11,30 @@ import pprint as pp
 import traceback
 import time
 from flask_socketio import SocketIO, send
+from llama_index.core import StorageContext, load_index_from_storage
+from llama_index.core.tools import QueryEngineTool
+from llama_index.core.query_engine.router_query_engine import RouterQueryEngine
+from llama_index.core.selectors import LLMSingleSelector
+from llama_index.core import Settings
+from llama_index.llms.openai import OpenAI
+from llama_index.embeddings.openai import OpenAIEmbedding
+from web import server_config
+
 
 from flask import Flask, request, jsonify, send_from_directory, render_template
 
 app = Flask(__name__, static_url_path='', static_folder='static')
 socketio = SocketIO(app)
-
+query_engine = None
 COLORS = [ '#D98943', '#D9A78B', '#59696D', '#8CD0B6','#465659', '#7CA2A6', '#172626']
+
 
 # the root page, which shows a list of repos, if available
 @app.route('/')
 def serve_index():
-    repos = []
-    for db_file in glob.glob('../output/*.db'):
+    repos = []    
+    directory_root = server_config['db_path'] + '/*.db'
+    for db_file in glob.glob(server_config['db_path'] + '/*.db'):
         repo_name = os.path.basename(db_file).replace('.db', '')
         repo_name = repo_name.replace('-', '/', 1)
         repos.append(repo_name)
@@ -59,11 +70,26 @@ def serve_repo(repo_parent, repo_name):
 def query(repo_owner, repo_name):
     return render_template('query.html', repo_parent=repo_owner, repo_name=repo_name)
 
+
+
+class CustomOpenAI(OpenAI):
+    def _prepare_chat_with_tools(self, *args, **kwargs):
+        # Implement the abstract method here.
+        pass
+
 @socketio.on('message')
 def handle_message(data):
-    print('Received message:', data['message'])
+    global query_engine
+    if query_engine is None:
+        openai_key = os.environ.get("OPENAI_API_KEY")
+        Settings.llm = CustomOpenAI(api_key=openai_key, model="gpt-4o-mini")
+        Settings.embed_model = OpenAIEmbedding(api_key=openai_key, model="text-embedding-3-large")
+        query_engine = _init_rag(data['repo_name'])
+    print('Chat received message:', data['message'])
+    llm_response = query_engine.query(data['message'])
     time.sleep(5)
-    response = 'This is a response from the server. ' + data['message']
+    print(llm_response)
+    response = str(llm_response)
     send({'message': response}, broadcast=True)
 
 # 1: Commits By Author
@@ -573,7 +599,8 @@ def _get_first_commit_date(request_dict):
     return formatted_date
 
 def _get_last_run(repo_parent, repo_name):
-    f = open(f'../output/master_log.txt', 'r')
+
+    f = open(f'{server_config["db_path"]}/master_log.txt', 'r')
     lines = f.readlines()
     f.close()
     last_ran = ""
@@ -589,15 +616,48 @@ def _get_last_run(repo_parent, repo_name):
                 last_ran = last_ran.strftime('%m/%d/%Y')
     return last_ran
 
-
-
-
-
 def _get_db_name(request_dict):
     repo_parent = request_dict.get('repo_parent')
     repo_name = request_dict.get('repo_name')
-    return f"../output/{repo_parent}-{repo_name}.db"
+    return f"{server_config['db_path']}/{repo_parent}-{repo_name}.db"
 
-if __name__ == '__main__':
-#    app.run(debug=True)
-    socketio.run(app, debug=True)    
+
+def _init_rag(repo_name):
+    dir_name = f"{server_config['rag_path']}/{repo_name}_rag"
+    summary_storage_context = StorageContext.from_defaults(persist_dir=os.path.join(dir_name, 'summary'))
+    vector_storage_context = StorageContext.from_defaults(persist_dir=os.path.join(dir_name, 'vector'))
+    summary_index = load_index_from_storage(summary_storage_context)
+    vector_index = load_index_from_storage(vector_storage_context)
+
+    summary_query_engine = summary_index.as_query_engine(
+        response_mode="tree_summarize",
+    )
+    vector_query_engine = vector_index.as_query_engine()
+
+    summary_tool = QueryEngineTool.from_defaults(
+        query_engine=summary_query_engine,
+        description=(
+            "Useful for summarization questions related to the codebase."
+        ),
+    )
+
+    vector_tool = QueryEngineTool.from_defaults(
+        query_engine=vector_query_engine,
+        description=(
+            "Useful for retrieving specific context from the codebase."
+        ),  
+    )
+
+    query_engine = RouterQueryEngine(
+        selector=LLMSingleSelector.from_defaults(),
+        query_engine_tools=[
+            summary_tool,
+            vector_tool,
+        ],
+        verbose=True
+    )
+    
+    return query_engine
+
+
+
