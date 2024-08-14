@@ -8,6 +8,7 @@ from .annotate_commits import generate_descriptions, generate_pr_descriptions, g
 from .insights import generate_insights
 from .llm_config import get_base_url, get_key, init_cost_tracker
 from .build_rag import init_rag
+from .code_tree import build_tree
 
 def run(config):
 
@@ -57,12 +58,17 @@ def run(config):
     logging.info("Generating commit diff descriptions")
     generate_descriptions(access_token, repo_owner, repo_name, max_summary_length, ai_model)
 
-
     logging.info("Generating pull request descriptions from commit descriptions")
-    generate_pr_descriptions(repo_owner, repo_name, max_summary_length, summary_ai_model)
+    generate_pr_descriptions(repo_owner, repo_name, max_summary_length, summary_ai_model)    
 
-    logging.info("generating annotations/tagging commits")
+    logging.info("Generating annotations/tagging commits")
     generate_tag_annotations(repo_owner, repo_name, ai_model)
+
+    logging.info("Building code syntax tree")
+    build_tree(repo_local_full_path, repo_owner, repo_name, ai_model)
+
+    logging.info("init rag")
+    init_rag(True, repo_local_full_path, repo_owner, repo_name)
 
     logging.info("generate LLM summary core data")
     if start_date is None:
@@ -71,8 +77,6 @@ def run(config):
         end_date = _get_newest_commit_date(repo_owner, repo_name)
     generate_insights(repo_owner, repo_name, summary_ai_model, start_date, end_date)
 
-    logging.info("init rag")
-    init_rag(True, repo_local_full_path, repo_name)
 
 
     _log_master("last_completed", repo_owner, repo_name, datetime.datetime.now().isoformat())

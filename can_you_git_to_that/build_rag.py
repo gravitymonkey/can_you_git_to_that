@@ -35,10 +35,10 @@ def _rag_exists(dir_name, subdirs):
 
     return index_exists
 
-def _build_rag(force_rebuild_rag, repo_full_path, repo_name):
+def _build_rag(force_rebuild_rag, repo_full_path, repo_parent, repo_name):
     try:
         logging.info("force rebuild rag: %s; repo_full_path: %s", force_rebuild_rag, repo_full_path)
-        dir_name = f"./output/{repo_name}_rag"
+        dir_name = f"./output/{repo_parent}-{repo_name}_rag"
         summary_index = None
         vector_index = None
 
@@ -49,7 +49,7 @@ def _build_rag(force_rebuild_rag, repo_full_path, repo_name):
         if force_rebuild_rag or not _rag_exists(dir_name, ["summary", "vector"]):
             logging.info("Building/rebuilding RAG")
 
-            documents = SimpleDirectoryReader(f"./output/{repo_name}_source").load_data()
+            documents = SimpleDirectoryReader(f"./output/{repo_parent}-{repo_name}_source").load_data()
             # read the copy of the source, so we won't read/index anything in .gitignore
             splitter = SentenceSplitter(chunk_size=1024)
             nodes = splitter.get_nodes_from_documents(documents)
@@ -104,10 +104,10 @@ def _build_rag(force_rebuild_rag, repo_full_path, repo_name):
         raise e
 
 
-def _copy_code(full_path, repo_name):
+def _copy_code(full_path, repo_parent, repo_name):
     try:
         logging.info("Copy code")
-        dir_name = f"./output/{repo_name}_source"
+        dir_name = f"./output/{repo_parent}-{repo_name}_source"
 
         # Empty the directory first
         if os.path.exists(dir_name):
@@ -117,7 +117,7 @@ def _copy_code(full_path, repo_name):
         # Read the .gitignore file
         gitignore_path = os.path.join(full_path, '.gitignore')
         if os.path.exists(gitignore_path):
-            with open(gitignore_path, 'r') as f:
+            with open(gitignore_path, 'r', encoding='utf-8') as f:
                 gitignore_patterns = f.read().splitlines()
         else:
             gitignore_patterns = []
@@ -137,17 +137,18 @@ def _copy_code(full_path, repo_name):
                     os.makedirs(os.path.dirname(dest_path), exist_ok=True)
                     # Copy the file
                     shutil.copy2(os.path.join(root, file), dest_path)
-                    logging.info(f"Copied {file_path} to {dest_path}")
+                    logging.info("Copied %s to %s", file_path, dest_path)
 
     except Exception as e:
         logging.error("Error copying code: %s", e)
         traceback.print_exc()
         raise e
-    
-def init_rag(force_rebuild, full_path, repo_name):
+
+def init_rag(force_rebuild, full_path, repo_owner, repo_name):
+    _copy_code(full_path, repo_owner, repo_name) # we'll always copy and segment the code, if we rebuild the RAG that will trigger in _build_rag
+
     global query_engine
-    _copy_code(full_path, repo_name) # we'll always copy and segment the code, if we rebuild the RAG that will trigger in _build_rag
-    query_engine = _build_rag(force_rebuild, full_path, repo_name)  # Force rebuild for testing
+    query_engine = _build_rag(force_rebuild, full_path, repo_owner, repo_name)  # Force rebuild for testing
 
 def get_rag():
     return query_engine
