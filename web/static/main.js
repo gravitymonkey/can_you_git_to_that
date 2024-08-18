@@ -72,6 +72,17 @@ document.addEventListener("DOMContentLoaded", function() {
         return data;
     }
 
+    // Function to fetch complexity data
+    async function fetchFileComplexityData() {
+        let url = '/file-complexity?repo_parent=' + repoParent + '&repo_name=' + repoName;
+        if (startAt) {
+            url += '&startAt=' + startAt;
+        }
+        const response = await fetch(url);
+        const data = await response.json();
+        return data;
+    }
+
 
     function createAuthorCommitChart(data) {
         const ctx = document.getElementById('author-commit-chart').getContext('2d');
@@ -537,7 +548,31 @@ async function fetchInsightsSummary(which) {
     }
 
 
-
+    // Function to create a complexity chart
+    function createFileComplexityChart(data) {
+        const files = data.files[0];
+        const ctx = document.getElementById('file-complexity-chart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: files.map(row => row.file_name),
+                datasets: [{
+                    label: 'Mean Composite Complexity Rating per File',
+                    data: files.map(row => row.avg_complexity),
+                    backgroundColor: 'rgba(140, 208, 182, 0.5)',
+                    borderColor: 'rgba(140, 208, 182, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
     fetchAuthorData().then(data => {
         createAuthorCommitChart(data);
     });
@@ -584,6 +619,12 @@ async function fetchInsightsSummary(which) {
             createSunburstChart(data, width);
         }
     }  
+    
+    // Fetch and display complexity data
+    fetchFileComplexityData().then(data => {
+        createFileComplexityChart(data);
+    });
+    
 
     
     fetchInsightsSummary('author-commits-summary').then(data => {

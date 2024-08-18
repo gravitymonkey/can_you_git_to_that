@@ -19,8 +19,9 @@ from llama_index.core import Settings
 from llama_index.llms.openai import OpenAI
 from llama_index.embeddings.openai import OpenAIEmbedding
 from web import server_config
-
-
+from tinydb import TinyDB, Query
+from tinydb.storages import JSONStorage
+from tinydb.middlewares import CachingMiddleware
 from flask import Flask, request, jsonify, send_from_directory, render_template
 
 app = Flask(__name__, static_url_path='', static_folder='static')
@@ -489,6 +490,52 @@ def generate_sunburst_json():
     }
 
     return jsonify(json_data)
+
+
+@app.route('/file-complexity')
+def file_complexity():
+    repo_parent = request.args.get('repo_parent')
+    repo_name = request.args.get('repo_name')
+#    start_at = request.args.get('startAt')
+    filename = f'./output/{repo_parent}-{repo_name}_tinydb.json'
+     
+    # Check if the file exists
+    if not os.path.exists(filename):
+        return jsonify({"error": "Code Tree File not found"}), 404
+    
+    # Open the JSON file with TinyDB
+    db = TinyDB(filename, storage=CachingMiddleware(JSONStorage))
+
+    results = db.all()
+    complexity_data = []
+    last_modified = "Unknown"
+
+    for record in results:
+        if 'file_path' in record:
+            file_path = record.get('file_path')   
+            # trim that file name down
+            extract = '/_source/'
+            ix = file_path.index(extract)# it's all analyzed from a copy of the repo
+            if ix > -1:
+                file_path = file_path[ix + len(extract):]
+            max_complexity = record.get('avg_composite_complexity')
+            complexity_data.append({
+                "file_name": file_path,
+                "avg_complexity": max_complexity,
+    #            "last_modified": last_modified
+            })
+        else:
+            last_modified = record.get('last_modified')  
+
+    # Sort the complexity_data list by max_complexity in descending order
+    complexity_data = sorted(complexity_data, key=lambda x: x['avg_complexity'], reverse=True)
+
+    data_resp = {}
+    data_resp['files'] = complexity_data,
+    data_resp['last_modified'] = last_modified
+    print(data_resp)
+
+    return jsonify(data_resp)
 
 @app.route('/explain', methods=['POST'])
 def summarize_data_with_ai():

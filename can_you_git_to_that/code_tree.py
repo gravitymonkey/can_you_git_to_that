@@ -4,7 +4,12 @@ import logging
 import hashlib
 from tree_sitter import Language, Parser
 from .llm import describe_code, rate_code
+import json
+from tinydb import TinyDB, Query
+from tinydb.storages import MemoryStorage
+import datetime
 
+tinydb = None #this holds the tree in memory and makes it a lil more queryable
 
 def _build_language_library(full_path):
     languages = {
@@ -14,6 +19,10 @@ def _build_language_library(full_path):
         'ruby': f'{full_path}/vendor/tree-sitter-ruby',
         # Add more languages as needed
     }
+
+    for lang, path in languages.items():
+        logging.info("Building language library for %s from %s", lang, path)
+
     Language.build_library(
         'build/my-languages.so',
         list(languages.values())
@@ -481,12 +490,74 @@ def _point_to_index(source_code, point):
 
 def build_tree(full_path, repo_parent, repo_name, ai_model):
     # list current directory
-    print(os.getcwd())
+    logging.info("Build_Tree using current working dir: %s", os.getcwd())
 
     languages = _build_language_library(full_path)
 
-    repo_path = f'./output/{repo_parent}-{repo_name}_source'
+    repo_path = f'./output/{repo_parent}-{repo_name}/_source'
     repo_map = _map_repository(repo_path, languages, ai_model)
 
-    with open(f'./output/{repo_parent}-{repo_name}_repo_map.json', 'w', encoding='utf-8') as f:
+    filename = f'./output/{repo_parent}-{repo_name}_repo_map.json'
+
+    with open(filename, 'w', encoding='utf-8') as f:
         json.dump(repo_map, f, indent=4)
+
+
+def init_tinydb(repo_parent, repo_name):
+    filename = f'./output/{repo_parent}-{repo_name}_repo_map.json'
+    tinyname = f'./output/{repo_parent}-{repo_name}_tinydb.json'
+    # Load the JSON data from the file
+    with open(filename, 'r', encoding='utf-8') as file:
+        data = json.load(file)
+
+    # get rid of existing tiny name if it exists
+    if os.path.exists(tinyname):
+        os.remove(tinyname)
+
+    # Initialize TinyDB 
+    db = TinyDB(tinyname) #storing it so the webserver can use it later
+
+    # Insert the data into TinyDB
+    for file_path, details in data.items():
+        sum_complexity = 0
+        count_functions = 0
+        functions = []
+        if 'functions' in details:
+            for function in details['functions']:
+                # Track the maximum composite complexity for this file
+                complexity = function.get('composite_complexity', 0)
+                if complexity > 0:
+                    sum_complexity += complexity
+                    count_functions += 1
+                dx = {
+                    'file_path': file_path,
+                    'function_name': function.get('name'),
+                    'composite_complexity': complexity,
+                    'lines_of_code': function.get('lines_of_code'),
+                    'cyclomatic_complexity': function.get('cyclomatic_complexity'),
+                    'llm_code_readability': function.get('llm_code_readablity'),
+                    'nesting_depth': function.get('nesting_depth'),
+                    'number_of_variables': function.get('number_of_variables'),
+                    'number_of_function_calls': function.get('number_of_function_calls'),
+                    'description': function.get('description'),
+                    'source': function.get('code'),
+                    'location': function.get('location'),
+                }
+                functions.append(dx)
+
+        # Insert the file with its max complexity
+
+        db.insert({
+            'file_path': file_path,
+            'avg_composite_complexity': sum_complexity / count_functions if count_functions > 0 else 0,
+            'functions': functions
+        })   
+
+    # Get the last modification time as a timestamp
+    timestamp = os.path.getmtime(filename)
+    timestamp = datetime.datetime.fromtimestamp(timestamp).isoformat()
+    db.insert({'last_modified': timestamp})
+    
+
+    global tinydb # assign this to the global value so we can have access from other spots
+    tinydb = db

@@ -49,7 +49,7 @@ def _build_rag(force_rebuild_rag, repo_full_path, repo_parent, repo_name):
         if force_rebuild_rag or not _rag_exists(dir_name, ["summary", "vector"]):
             logging.info("Building/rebuilding RAG")
 
-            documents = SimpleDirectoryReader(f"./output/{repo_parent}-{repo_name}_source").load_data()
+            documents = SimpleDirectoryReader(f"./output/{repo_parent}-{repo_name}/_source").load_data()
             # read the copy of the source, so we won't read/index anything in .gitignore
             splitter = SentenceSplitter(chunk_size=1024)
             nodes = splitter.get_nodes_from_documents(documents)
@@ -106,8 +106,8 @@ def _build_rag(force_rebuild_rag, repo_full_path, repo_parent, repo_name):
 
 def _copy_code(full_path, repo_parent, repo_name):
     try:
-        logging.info("Copy code")
-        dir_name = f"./output/{repo_parent}-{repo_name}_source"
+        dir_name = f"./output/{repo_parent}-{repo_name}/_source"
+        logging.info("Copy relevant code from %s to %s", full_path, dir_name)
 
         # Empty the directory first
         if os.path.exists(dir_name):
