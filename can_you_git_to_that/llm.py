@@ -127,6 +127,56 @@ def summarize_pr(prs, ai_service, ai_model):
     return response.choices[0].message.content 
 
 
+def describe_code(func_name, func_code, filename, ai_service, ai_model):
+    system = get_prompt('describe_code_system.txt', {})
+
+    prompt = get_prompt('describe_code_user.txt', {"code": func_code, "func_name": func_name, "filename": filename})  
+
+    num_tokens = num_tokens_from_string(prompt)
+    logging.info("describe code has prompt w/num tokens: %s", num_tokens)
+
+    client = OpenAI(
+        base_url = get_base_url(ai_service),
+        api_key= get_key(ai_service),
+    )
+    model = ai_model
+    response = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.1
+    )
+    _track_LLM_cost(response, ai_service, ai_model)
+    return response.choices[0].message.content 
+
+
+def rate_code(func_name, func_code, filename, ai_service, ai_model):
+    system = get_prompt('rate_code_system.txt', {})
+
+    prompt = get_prompt('rate_code_user.txt', {"code": func_code, "func_name": func_name, "filename": filename})  
+
+    num_tokens = num_tokens_from_string(prompt)
+    logging.info("rate code has prompt w/num tokens: %s", num_tokens)
+
+    client = OpenAI(
+        base_url = get_base_url(ai_service),
+        api_key= get_key(ai_service),
+    )
+    model = ai_model
+    response = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.1
+    )
+    _track_LLM_cost(response, ai_service, ai_model)
+    return response.choices[0].message.content 
+
+
 def generate_summary(which, data, service_name, model_name):
     system = get_prompt(f'{which}_system.txt', {})
 

@@ -30,3 +30,9 @@ use_commit_desc_from_log	True
 # ai engine and model for pull request summaries and data summaries
 ai_summary_model	openai|gpt-4o-mini
 #ai_summary_model	ollama|mistral-8K
+
+# ai engine for RAG processing
+ai_summary_model	openai|gpt-4o-mini
+
+# embeddings model
+ai_summary_model	openai|gpt-4o-mini

@@ -76,6 +76,29 @@ Create a new model with the updated configuration:
 Now you can call `new_model_name` in your `config.txt`, if you're using Ollama for CYGTT.
 
 
+### Installing More Languages for Tree-sitter
+
+To add more languages to your Tree-sitter setup, you need to manually clone the language grammar repositories into a designated directory and then modify your script to include these languages in the build process.
+
+	1.	Clone the Language Grammar Repositories:
+For each language you want to add, clone the corresponding Tree-sitter grammar repository into the vendor directory.
+For example, to add JavaScript:
+
+`git clone https://github.com/tree-sitter/tree-sitter-javascript vendor/tree-sitter-javascript`
+
+	2.	Update the build_language_library Function:
+Modify your languages dictionary to include the new language(s) you cloned.
+
+```
+languages = {
+    'python': 'vendor/tree-sitter-python',
+    'javascript': 'vendor/tree-sitter-javascript',
+    # Add more languages here
+}
+```
+
+
+
 ### Additional Thoughts/References:
  * If you're going to use OpenAI's models, you will need to setup an `OPENAI_API_KEY` in your environment, as usual.  I would recommend the gpt-4o-mini model as a fast and accurate and cheap choice.  To be even cheaper, but probably not quite as fast nor as accurate, run Ollama locally.
  * What's next?  I'm mostly collecting ideas/todos in <a href="https://github.com/gravitymonkey/can_you_git_to_that/issues">issues</a>.  Feel free to take a peek and opine/ideate/complain.  

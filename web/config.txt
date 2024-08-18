@@ -1,0 +1,3 @@
+db_path	./output
+rag_path	./output
+ai_query_model	openai|gpt-4o-mini

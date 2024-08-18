@@ -8,6 +8,14 @@
             "input": 0.150,
             "output": 0.600
         },
+        "gpt-4o": {
+            "input": 5.0,
+            "output": 15.0
+        },
+        "gpt-4o-2024-08-06": {
+            "input": 2.50,
+            "output": 10.00
+        },
         "gpt-4-turbo": {
             "input": 10.00,
             "output": 30.00

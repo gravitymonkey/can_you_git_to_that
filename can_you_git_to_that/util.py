@@ -7,7 +7,8 @@ from .import_to_db import fill_db
 from .annotate_commits import generate_descriptions, generate_pr_descriptions, generate_tag_annotations, backfill_descriptions_from_log
 from .insights import generate_insights
 from .llm_config import get_base_url, get_key, init_cost_tracker
-from .build_rag import init_rag
+from .build_rag import init_rag, copy_code
+from .code_tree import build_tree, init_tinydb
 
 def run(config):
 
@@ -31,25 +32,25 @@ def run(config):
     _log_master("last_started", repo_owner, repo_name, datetime.datetime.now().isoformat())
 
     git_log = get_commit_log(access_token, repo_owner, repo_name)
-    logging.info("log output written to %s", git_log)
+    logging.info("Log output written to %s", git_log)
 
     pr_log = get_pr_data(access_token, repo_owner, repo_name)
-    logging.info("pr output written to %s", pr_log)
+    logging.info("PR output written to %s", pr_log)
 
     commit_csv = create_csv(repo_owner, 
                             repo_name, 
                             git_log, 
                             exclude_file_pattern=exclude_files, 
                             exclude_author_pattern=exclude_authors)
-    logging.info("commit csv written to %s", commit_csv)
+    logging.info("Commit csv written to %s", commit_csv)
 
     db_path = fill_db(config)
-    logging.info("database written to %s", db_path)
+    logging.info("Database written to %s", db_path)
 
-    logging.info("calling backfilling descriptions from log")
+    logging.info("Check backfill descriptions from log")
     backfill_descriptions_from_log(repo_owner, repo_name, use_commit_desc_from_log)    
 
-    logging.info("init cost tracker")
+    logging.info("Init cost tracker")
     cost_to_date = init_cost_tracker(repo_owner, repo_name)
     logging.info("Historical LLM API cost for %s to date: $%s", repo_name, cost_to_date)
     # add logic here to close if we're over a certain amount of total cost
@@ -57,22 +58,30 @@ def run(config):
     logging.info("Generating commit diff descriptions")
     generate_descriptions(access_token, repo_owner, repo_name, max_summary_length, ai_model)
 
-
     logging.info("Generating pull request descriptions from commit descriptions")
-    generate_pr_descriptions(repo_owner, repo_name, max_summary_length, summary_ai_model)
+    generate_pr_descriptions(repo_owner, repo_name, max_summary_length, summary_ai_model)    
 
-    logging.info("generating annotations/tagging commits")
+    logging.info("Generating annotations/tagging commits")
     generate_tag_annotations(repo_owner, repo_name, ai_model)
 
-    logging.info("generate LLM summary core data")
+    logging.info("Copying code to output source directory for analysis")
+    copy_code(repo_local_full_path, repo_owner, repo_name)
+
+    logging.info("Building code syntax tree")
+    build_tree(repo_local_full_path, repo_owner, repo_name, ai_model)
+    logging.info("Building in-memory TinyDB of code-tree")
+    init_tinydb(repo_owner, repo_name)
+
+    logging.info("Init Retrieval Augmented Generation (RAG) for Chat")
+    init_rag(True, repo_local_full_path, repo_owner, repo_name)
+
+    logging.info("Generate LLM summary core data")
     if start_date is None:
         start_date = _get_oldest_commit_date(repo_owner, repo_name)
     if end_date is None:
         end_date = _get_newest_commit_date(repo_owner, repo_name)
     generate_insights(repo_owner, repo_name, summary_ai_model, start_date, end_date)
 
-    logging.info("init rag")
-    init_rag(True, repo_local_full_path, repo_name)
 
 
     _log_master("last_completed", repo_owner, repo_name, datetime.datetime.now().isoformat())

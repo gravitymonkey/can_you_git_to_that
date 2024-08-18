@@ -164,3 +164,4 @@ cython_debug/
 .vscode/settings.json
 output
 /scratch
+/vendor/*/

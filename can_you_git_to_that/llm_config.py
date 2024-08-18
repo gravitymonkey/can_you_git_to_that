@@ -2,6 +2,7 @@ import os
 import tiktoken
 import json
 from jinja2 import Environment, FileSystemLoader
+import logging
 
 LLM_PRICING = {}
 
@@ -62,12 +63,16 @@ def init_cost_tracker(repo_parent, repo_name):
     return total_cost_to_date
         
 def _load_pricing(filename):
-    with open('llm_pricing.json', encoding='utf-8') as f:
-        data = json.load(f)
-    pricing = {}
-    pricing['logfile'] = filename
-    pricing['prices'] = data
-    return pricing
+    try:
+        with open('llm_pricing.json', encoding='utf-8') as f:
+            data = json.load(f)
+        pricing = {}
+        pricing['logfile'] = filename
+        pricing['prices'] = data
+        return pricing
+    except Exception as e:
+        logging.error("Error loading LLM pricing: %s", e)
+        return {}
 
 def get_LLM_pricing():
     return LLM_PRICING
