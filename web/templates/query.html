@@ -118,7 +118,7 @@
                 if (message.trim()) {
                     appendMessage(message, 'You');
                     disableInput();  // Disable input and button
-                    socket.emit('message', {message: message, repo_name: repoName});  // Send message to server
+                    socket.emit('message', {message: message, repo_parent: repoParent, repo_name: repoName});  // Send message to server
                     chatInput.value = ''; // Clear the input
                 }
             });

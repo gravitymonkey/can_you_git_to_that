@@ -4,6 +4,7 @@ import math
 import glob
 import os
 import re
+import logging
 from collections import namedtuple, defaultdict
 from datetime import datetime, timedelta, date as ddate
 from isoweek import Week
@@ -85,7 +86,7 @@ def handle_message(data):
         openai_key = os.environ.get("OPENAI_API_KEY")
         Settings.llm = CustomOpenAI(api_key=openai_key, model="gpt-4o-mini")
         Settings.embed_model = OpenAIEmbedding(api_key=openai_key, model="text-embedding-3-large")
-        query_engine = _init_rag(data['repo_name'])
+        query_engine = _init_rag(data['repo_parent'], data['repo_name'])
     print('Chat received message:', data['message'])
     llm_response = query_engine.query(data['message'])
     time.sleep(5)
@@ -533,7 +534,6 @@ def file_complexity():
     data_resp = {}
     data_resp['files'] = complexity_data,
     data_resp['last_modified'] = last_modified
-    print(data_resp)
 
     return jsonify(data_resp)
 
@@ -669,17 +669,21 @@ def _get_db_name(request_dict):
     return f"{server_config['db_path']}/{repo_parent}-{repo_name}.db"
 
 
-def _init_rag(repo_name):
-    dir_name = f"{server_config['rag_path']}/{repo_name}_rag"
+def _init_rag(repo_parent, repo_name):
+    dir_name = f"{server_config['rag_path']}/{repo_parent}-{repo_name}_rag"
     summary_storage_context = StorageContext.from_defaults(persist_dir=os.path.join(dir_name, 'summary'))
     vector_storage_context = StorageContext.from_defaults(persist_dir=os.path.join(dir_name, 'vector'))
+    code_storage_content = StorageContext.from_defaults(persist_dir=os.path.join(dir_name, 'code_vector'))
+
     summary_index = load_index_from_storage(summary_storage_context)
     vector_index = load_index_from_storage(vector_storage_context)
+    code_vector_index = load_index_from_storage(code_storage_content)
 
     summary_query_engine = summary_index.as_query_engine(
         response_mode="tree_summarize",
     )
     vector_query_engine = vector_index.as_query_engine()
+    code_query_engine = code_vector_index.as_query_engine()
 
     summary_tool = QueryEngineTool.from_defaults(
         query_engine=summary_query_engine,
@@ -695,11 +699,19 @@ def _init_rag(repo_name):
         ),  
     )
 
+    code_vector_tool = QueryEngineTool.from_defaults(
+        query_engine=code_query_engine,
+        description=(
+            "Useful for questions about the source code itself."
+        ),
+    )
+
     query_engine = RouterQueryEngine(
         selector=LLMSingleSelector.from_defaults(),
         query_engine_tools=[
             summary_tool,
             vector_tool,
+            code_vector_tool,
         ],
         verbose=True
     )

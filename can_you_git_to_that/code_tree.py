@@ -561,3 +561,7 @@ def init_tinydb(repo_parent, repo_name):
 
     global tinydb # assign this to the global value so we can have access from other spots
     tinydb = db
+
+def get_tinydb():
+    global tinydb
+    return tinydb

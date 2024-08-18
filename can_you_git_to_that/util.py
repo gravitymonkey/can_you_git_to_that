@@ -7,7 +7,7 @@ from .import_to_db import fill_db
 from .annotate_commits import generate_descriptions, generate_pr_descriptions, generate_tag_annotations, backfill_descriptions_from_log
 from .insights import generate_insights
 from .llm_config import get_base_url, get_key, init_cost_tracker
-from .build_rag import init_rag
+from .build_rag import init_rag, copy_code
 from .code_tree import build_tree, init_tinydb
 
 def run(config):
@@ -64,12 +64,15 @@ def run(config):
     logging.info("Generating annotations/tagging commits")
     generate_tag_annotations(repo_owner, repo_name, ai_model)
 
+    logging.info("Copying code to output source directory for analysis")
+    copy_code(repo_local_full_path, repo_owner, repo_name)
+
     logging.info("Building code syntax tree")
     build_tree(repo_local_full_path, repo_owner, repo_name, ai_model)
-    logging.info("Building in memory TinyDB of code tree")
+    logging.info("Building in-memory TinyDB of code-tree")
     init_tinydb(repo_owner, repo_name)
 
-    logging.info("Init RAG")
+    logging.info("Init Retrieval Augmented Generation (RAG) for Chat")
     init_rag(True, repo_local_full_path, repo_owner, repo_name)
 
     logging.info("Generate LLM summary core data")
