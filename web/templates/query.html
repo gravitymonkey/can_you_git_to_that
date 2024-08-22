@@ -10,6 +10,12 @@
         body {
             font-family: 'Fira Code', monospace;
         }
+        code {
+            background-color: #f5f5f5; /* Slight gray background color */
+            padding: 2px 4px; /* Optional: Adds some padding for better readability */
+            border-radius: 3px; /* Optional: Adds rounded corners */
+            font-family: 'Courier New', Courier, monospace; /* Ensures a monospaced font */
+        }        
         .header-icon img {
             width: 16px;
             height: 16px;
@@ -67,7 +73,7 @@
     <script src="https://unpkg.com/d3"></script>
     <script src="https://unpkg.com/sunburst-chart"></script>
     <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/showdown/dist/showdown.min.js"></script>
     <!-- Embed parameters in a script tag -->
     <script type="text/javascript">
         var repoParent = "{{ repo_parent }}";
@@ -83,12 +89,35 @@
             const chatInput = document.getElementById('chat-input');
             const sendButton = document.getElementById('send-button');
             const socket = io();  // Initialize Socket.IO client
-    
+            // Initialize Showdown converter
+            const converter = new showdown.Converter();
+
             // Function to append a message to the chat box
             function appendMessage(message, sender) {
                 const messageElement = document.createElement('div');
                 messageElement.classList.add('p-2', 'border-b');
-                messageElement.innerHTML = `<strong>${sender}:</strong> ${message}`;
+                messageElement.style.fontFamily = 'Arial, sans-serif';
+
+                // Check if the sender is "You"
+                if (sender === 'You') {
+                    // Create a strong element for the sender
+                    const senderElement = document.createElement('strong');
+                    senderElement.textContent = `${sender}: `;
+                    // Create a text node for the message (to show HTML code as source)
+                    const messageText = document.createTextNode(message);
+
+                    // Append the sender and message to the message element
+                    messageElement.appendChild(senderElement);
+                    messageElement.appendChild(messageText);
+                } else {
+                    // Convert Markdown to HTML using Showdown for other senders
+                    const htmlContent = converter.makeHtml(message);
+                    messageElement.innerHTML = `<strong>${sender}:</strong> ${htmlContent}`;
+                }
+
+                // Convert Markdown to HTML using Showdown
+                const htmlContent = converter.makeHtml(message);
+                messageElement.innerHTML = `<strong>${sender}:</strong> ${htmlContent}`;
                 chatBox.appendChild(messageElement);
                 chatBox.scrollTop = chatBox.scrollHeight; // Scroll to the bottom
             }

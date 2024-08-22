@@ -87,10 +87,7 @@ def handle_message(data):
         Settings.llm = CustomOpenAI(api_key=openai_key, model="gpt-4o-mini")
         Settings.embed_model = OpenAIEmbedding(api_key=openai_key, model="text-embedding-3-large")
         query_engine = _init_rag(data['repo_parent'], data['repo_name'])
-    print('Chat received message:', data['message'])
     llm_response = query_engine.query(data['message'])
-    time.sleep(5)
-    print(llm_response)
     response = str(llm_response)
     send({'message': response}, broadcast=True)
 
@@ -705,6 +702,7 @@ def _init_rag(repo_parent, repo_name):
             "Useful for questions about the source code itself."
         ),
     )
+
 
     query_engine = RouterQueryEngine(
         selector=LLMSingleSelector.from_defaults(),

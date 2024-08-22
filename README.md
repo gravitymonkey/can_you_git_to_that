@@ -27,7 +27,7 @@ To run it, modify the settings in the tab-delimited `config.txt`. This file, `ex
 
 What's gonna happen?  Well, first, the app reads `config.txt` and collects and generates a bunch of data about your repo.  To collect data, it uses <a href="https://github.com/PyGithub/PyGithub">PyGithub</a> to query the Github API (you'll need a Github personal access token, more info below), ultimately moving that data into a Sqlite database in the `output` directory.  To generate, the app uses an LLM (either OpenAI or Ollama, as configured in `config.txt`) to generate plain-language summaries (of commit diffs) and to classify and tag file changes, and store them in the database.  The approximate accrued cost of your LLM usage is calculated and show via logging output -- as a reference, to generate the example screenshot above, and processing this repo and it's changes solely using `gpt-4o-mini` (7/2024) via API cost just under $0.04 to process.
 
-Once this process completes succesfully, the next step is to run `flask --app server run` from the `web` directory, which will serve reports from <a href="http://127.0.0.1:5000">http://127.0.0.1:5000</A>.
+Once this process completes succesfully, the next step is to run `flask --app web.server run -p 5001` in the directory next to the `web` directory, which will serve reports from <a href="http://127.0.0.1:5001">http://127.0.0.1:5001</A>.
 
 
 ## Config Details
@@ -106,4 +106,5 @@ languages = {
  * The name of this project is based on the Funkadelic song <A HREF="https://open.spotify.com/track/5lc9L9FeLBwlJPgEbq9uEw?si=2b9b0249f09e4fb6">"Can You Get To That"</A> off the _Maggot Brain_ album (1971).  Graphics used here were created with <a href="https://recraft.ai">Recraft.ai</A>, and take their inspiration from my related project <a href="https://github.com/gravitymonkey/give_up_the_func">Give Up The Func</A>.
  * Details on changing Ollama context size found at <A HREF="https://www.nurgo-software.com/products/brainsoup">Nurgo Software</A>, for their product "Brain Soup".
  * Adam Tornhill's <A HREF="https://pragprog.com/titles/atcrime2/your-code-as-a-crime-scene-second-edition/">Your Code As A Crime Scene</A> is a great resource, and the origin of a __git-as-forensics__ approach.  If you don't want to tackle a DIY approach here, consider Adam's company <A HREF="https://codescene.com/">Code Scene</A>.
+ * The code example, above, to run the web view uses port 5001, instead of the default 5000, as 5000 seems to _sometimes_ a conflict on MacOS.  Change it to whatever you want or need.
 
