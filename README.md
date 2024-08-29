@@ -107,4 +107,4 @@ languages = {
  * Details on changing Ollama context size found at <A HREF="https://www.nurgo-software.com/products/brainsoup">Nurgo Software</A>, for their product "Brain Soup".
  * Adam Tornhill's <A HREF="https://pragprog.com/titles/atcrime2/your-code-as-a-crime-scene-second-edition/">Your Code As A Crime Scene</A> is a great resource, and the origin of a __git-as-forensics__ approach.  If you don't want to tackle a DIY approach here, consider Adam's company <A HREF="https://codescene.com/">Code Scene</A>.
  * The code example, above, to run the web view uses port 5001, instead of the default 5000, as 5000 seems to _sometimes_ a conflict on MacOS.  Change it to whatever you want or need.
-
+ * Solid and fun-to-read article on RAG across multiple data sources, including lots of SQL tables by <A HREF="https://levelup.gitconnected.com/sql-generator-how-i-build-ai-query-wizard-for-enterprise-scale-with-500-tables-fc290692632a">Ryan Nguyen</A>.

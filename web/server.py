@@ -676,6 +676,8 @@ def _init_rag(repo_parent, repo_name):
     vector_index = load_index_from_storage(vector_storage_context)
     code_vector_index = load_index_from_storage(code_storage_content)
 
+# i think, if i'm writing my own query engine, i can use the indexes above, and not what's below
+
     summary_query_engine = summary_index.as_query_engine(
         response_mode="tree_summarize",
     )

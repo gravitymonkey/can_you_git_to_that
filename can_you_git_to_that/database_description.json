@@ -1,0 +1,316 @@
+[
+    {
+      "TableName": "commit_tags",
+      "TableDescription": "This table links commits with specific descriptive tags, providing a way to categorize changes in the repository. It enables tagging of commits with different labels for easier understanding and analysis.",
+      "Columns": [
+        {
+          "name": "commit_id",
+          "type": "INTEGER",
+          "description": "Foreign key referencing the 'id' in the commits table. It identifies the specific commit associated with a tag."
+        },
+        {
+          "name": "tag_id",
+          "type": "INTEGER",
+          "description": "Foreign key referencing the 'id' in the tags table. It identifies the specific tag applied to the commit."
+        },
+        {
+          "name": "value",
+          "type": "REAL",
+          "description": "The numerical value associated with the tag for the commit. This is a proportion of the tag that applies to the associated commit - 0.5 means that half of the work in the commit is related to the tag; 1.0 is all of the work in the commit is related to the tag."
+        }
+      ],
+      "AdditionalInsights": [
+        "Useful for filtering and analyzing commits based on specific tags.",
+        "Enables aggregation of commit data based on tags, providing insights into patterns and trends."
+      ],
+      "CommonQueries": [
+        {
+          "natural_language": "Retrieve all commits with a specific tag.",
+          "sql_query": "SELECT * FROM commit_tags WHERE tag_id = ?;"
+        },
+        {
+          "natural_language": "Find commits with the highest tag value.",
+          "sql_query": "SELECT commit_id FROM commit_tags WHERE tag_id = ? ORDER BY value DESC LIMIT 10;"
+        }
+      ]
+    },
+    {
+      "TableName": "commits",
+      "TableDescription": "This table stores detailed information about each commit in the repository, including metadata such as author, timestamp, and description. It serves as the primary source for analyzing the contributors, and progression and nature of changes over time.",
+      "Columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "description": "Primary key for identifying each commit uniquely within the database."
+        },
+        {
+          "name": "commit_hash",
+          "type": "TEXT",
+          "description": "The unique hash identifier for the commit. Essential for linking the commit with its representation in the repository.  This hash is also referenced in the pull_requests table as merge_commit_sha."
+        },
+        {
+          "name": "timestamp",
+          "type": "INTEGER",
+          "description": "Unix timestamp indicating when the commit was made. Useful for chronological analysis of repository changes."
+        },
+        {
+          "name": "date",
+          "type": "TEXT",
+          "description": "Human-readable date format of the commit timestamp."
+        },
+        {
+          "name": "author",
+          "type": "TEXT",
+          "description": "The name of the person who authored the commit. Important for tracking contributions by individuals. Also referenced in pull_requests as user_login."
+        },
+        {
+          "name": "email",
+          "type": "TEXT",
+          "description": "The email address of the commit author. Useful for identifying and grouping commits by author, as sometimes the same individual my contribute under multiple emails or author names."
+        },
+        {
+          "name": "filename",
+          "type": "TEXT",
+          "description": "The name of the file affected by the commit. Allows analysis of changes on a per-file basis."
+        },
+        {
+          "name": "churn_count",
+          "type": "INTEGER",
+          "description": "The number of lines added, modified, or deleted in the commit. A key metric for understanding the magnitude of the change."
+        },
+        {
+          "name": "description",
+          "type": "TEXT",
+          "description": "An AI generated plain-language description of the code changes made on this file in this commit. Provides context for the changes made."
+        }
+      ],
+      "AdditionalInsights": [
+        "Ideal for time series analysis of repository changes.",
+        "Useful for identifying active contributors and the areas of the codebase they frequently modify."
+      ],
+      "CommonQueries": [
+        {
+          "natural_language": "Find all commits made by a specific author.",
+          "sql_query": "SELECT * FROM commits WHERE author = ?;"
+        },
+        {
+          "natural_language": "List all files modified in the last 30 days.",
+          "sql_query": "SELECT filename FROM commits WHERE timestamp > strftime('%s', 'now', '-30 days');"
+        },
+        {
+          "natural_language": "Identify commits with high churn counts.",
+          "sql_query": "SELECT * FROM commits WHERE churn_count > ?;"
+        }
+      ]
+    },
+    {
+      "TableName": "tags",
+      "TableDescription": "This table contains metadata tags that can be associated with commits. Tags can be used to classify commits according to the type of work that the commit/diff has done -- e.g. FrontEnd, API, Security, etc.",
+      "Columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "description": "Primary key for identifying each tag uniquely within the database."
+        },
+        {
+          "name": "name",
+          "type": "TEXT",
+          "description": "The name or label of the tag. Used to categorize and describe the type of work in a commit."
+        }
+      ],
+      "AdditionalInsights": [
+        "Facilitates the grouping and filtering of commits based on specific tags."
+      ],
+      "CommonQueries": [
+        {
+          "natural_language": "Retrieve all tag names.",
+          "sql_query": "SELECT name FROM tags;"
+        },
+        {
+          "natural_language": "Find the tag ID for a specific tag name.",
+          "sql_query": "SELECT id FROM tags WHERE name = ?;"
+        }
+      ]
+    },
+    {
+      "TableName": "pull_requests",
+      "TableDescription": "This table captures information about pull requests within the repository, including their state, author, and merge details. It is helpful context for understanding the commit process and the general flow from development to release, if used by the team.",
+      "Columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "description": "Primary key for identifying each pull request uniquely within the database."
+        },
+        {
+          "name": "number",
+          "type": "INTEGER",
+          "description": "The unique number assigned to the pull request within the repository."
+        },
+        {
+          "name": "title",
+          "type": "TEXT",
+          "description": "The title of the pull request by the author. Provides a brief summary of the changes proposed."
+        },
+        {
+          "name": "user_login",
+          "type": "TEXT",
+          "description": "The GitHub username of the individual who created the pull request. Also referenced in the commits table as author."
+        },
+        {
+          "name": "state",
+          "type": "TEXT",
+          "description": "The current state of the pull request (e.g., open, closed, merged). Indicates the progress and outcome of the review process."
+        },
+        {
+          "name": "created_at",
+          "type": "TEXT",
+          "description": "The date and time when the pull request was created. Useful for tracking the lifecycle of changes."
+        },
+        {
+          "name": "merged",
+          "type": "INTEGER",
+          "description": "Flag indicating whether the pull request was successfully merged (1) or not (0)."
+        },
+        {
+          "name": "merged_at",
+          "type": "TEXT",
+          "description": "The date and time when the pull request was merged. Relevant for understanding the integration timeline."
+        },
+        {
+          "name": "merge_commit_sha",
+          "type": "TEXT",
+          "description": "The SHA hash of the merge commit. Used to track the exact state of the codebase after the merge. Shares values and references with commits.merge_commit."
+        },
+        {
+          "name": "mergeable",
+          "type": "TEXT",
+          "description": "Indicates whether the pull request was considered mergeable at the time of creation. Potentiall useful for assessing potential conflicts."
+        },
+        {
+          "name": "mergeable_state",
+          "type": "TEXT",
+          "description": "Describes the mergeable state (e.g., clean, unstable, blocked). Provides context on the conditions for merging."
+        },
+        {
+          "name": "comments",
+          "type": "TEXT",
+          "description": "The comments made on the pull request. Reflects the discussions and feedback during the review process."
+        },
+        {
+          "name": "review_comments",
+          "type": "TEXT",
+          "description": "Comments specifically related to the code review process. These are usually more technical and detailed."
+        },
+        {
+          "name": "closed_at",
+          "type": "TEXT",
+          "description": "The date and time when the pull request was closed. Indicates the end of the review process, whether merged or not."
+        },
+        {
+          "name": "html_url",
+          "type": "TEXT",
+          "description": "The URL to view the pull request on GitHub. Provides a direct link for further inspection."
+        },
+        {
+          "name": "description",
+          "type": "TEXT",
+          "description": "An AI generated plain-language description of this pull request, potentially summarizing the purpose and key changes. Potentially valuable for understanding the scope, impact and risk of the change."
+        }
+      ],
+      "AdditionalInsights": [
+        "Crucial for understanding the collaborative aspect of repository development.",
+        "Supports analysis of review timelines and merge efficiency."
+      ],
+      "CommonQueries": [
+      {
+        "natural_language": "Retrieve all open pull requests.",
+        "sql_query": "SELECT * FROM pull_requests WHERE state = 'open';"
+      },
+      {
+        "natural_language": "Find all pull requests merged within the last month.",
+        "sql_query": "SELECT * FROM pull_requests WHERE merged = 1 AND merged_at > strftime('%Y-%m-%d', 'now', '-1 month');"
+      },
+      {
+        "natural_language": "List all pull requests created by a specific user.",
+        "sql_query": "SELECT * FROM pull_requests WHERE user_login = ?;"
+      },
+      {
+        "natural_language": "Calculate the average time to merge pull requests.",
+        "sql_query": "SELECT AVG(strftime('%s', merged_at) - strftime('%s', created_at)) / 3600 AS avg_merge_time_hours FROM pull_requests WHERE merged = 1;"
+      },
+      {
+        "natural_language": "Retrieve pull requests with a specific title keyword.",
+        "sql_query": "SELECT * FROM pull_requests WHERE title LIKE '%keyword%';"
+      }
+    ]
+  },
+  {
+    "TableName": "summaries",
+    "TableDescription": "This table stores AI generated summaries for specific aspects of the repository, describing specific aspects by reviewing subsets of the data. It is intended to provide a high level, plain-language way for someone to understand the data.",
+    "Columns": [
+      {
+        "name": "id",
+        "type": "INTEGER",
+        "description": "Primary key for identifying each summary uniquely within the database."
+      },
+      {
+        "name": "name",
+        "type": "TEXT",
+        "description": "The name of the summary.  This name is used to identify where to show it, and what data to pair with it, in the report UI."
+      },
+      {
+        "name": "hash",
+        "type": "TEXT",
+        "description": "A unique hash representing the specific state of the data at the time the summary was generated. This ensures that an AI description isn't generated for the same data multiple times."
+      },
+      {
+        "name": "summary",
+        "type": "TEXT",
+        "description": "The actual text of the summary, which will have varying goals based upon the prompt which exists in the prompt directory."
+      },
+      {
+        "name": "ai_service",
+        "type": "TEXT",
+        "description": "The name of the AI service used to generate the summary (e.g., 'Ollama', or 'OpenAI'). Useful for tracking and understanding the source of the insights."
+      },
+      {
+        "name": "ai_model",
+        "type": "TEXT",
+        "description": "The specific model version or identifier used for generating the summary. Important for consistency and reproducibility of results."
+      },
+      {
+        "name": "start_date",
+        "type": "DATE",
+        "description": "The start date of the period covered by the summary. Defines the timeframe for the summary's insights."
+      },
+      {
+        "name": "end_date",
+        "type": "DATE",
+        "description": "The end date of the period covered by the summary. Complements the start date to establish the summary's coverage."
+      },
+      {
+        "name": "createdAt",
+        "type": "DATE",
+        "description": "The date when the summary was generated. Useful for understanding the freshness and relevance of the insights."
+      }
+    ],
+    "AdditionalInsights": [
+      "Useful for generating periodic reports or overviews for stakeholders.",
+      "Can be leveraged to compare different periods or milestones in the repository's history."
+    ],
+    "CommonQueries": [
+      {
+        "natural_language": "Retrieve the names of the summaries that have been generated.",
+        "sql_query": "SELECT DISTINCT name FROM summaries;"
+      },
+      {
+        "natural_language": "Find summaries generated by a specific AI model.",
+        "sql_query": "SELECT * FROM summaries WHERE ai_model = ?;"
+      },
+      {
+        "natural_language": "List all summaries covering a specific date range.",
+        "sql_query": "SELECT * FROM summaries WHERE start_date >= ? AND end_date <= ?;"
+      }
+    ]
+  }
+]
