@@ -80,6 +80,9 @@ def _build_rag(force_rebuild_rag, repo_full_path, repo_parent, repo_name):
             vector_index = load_index_from_storage(vector_storage_context)
             code_vector_index = load_index_from_storage(code_vector_storage_context)
 
+# may not need the rest of this method, if we don't use RAG within the main app.
+# we just build indices and save them to disk, and then load them later
+
         summary_query_engine = summary_index.as_query_engine(
             response_mode="tree_summarize",
         )

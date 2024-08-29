@@ -103,6 +103,13 @@ document.addEventListener("DOMContentLoaded", function() {
                     y: {
                         beginAtZero: true
                     }
+                },
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const author = data[index].author;
+                        window.location.href = `/details?type=author&name=${encodeURIComponent(author)}`;
+                    }
                 }
             }
         });
@@ -127,7 +134,15 @@ document.addEventListener("DOMContentLoaded", function() {
                     y: {
                         beginAtZero: true
                     }
+                },
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const file_name = data[index].filename;
+                        window.location.href = `/details?type=file&name=${encodeURIComponent(file_name)}`;
+                    }
                 }
+
             }
         });
     }
@@ -568,8 +583,15 @@ async function fetchInsightsSummary(which) {
                 scales: {
                     y: {
                         beginAtZero: true
+                    }        
+                },
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const file_name = files[index].file_name;
+                        window.location.href = `/details?type=file&name=${encodeURIComponent(file_name)}`;
                     }
-                }
+                }                
             }
         });
     }
@@ -614,7 +636,6 @@ async function fetchInsightsSummary(which) {
         container.innerHTML = '';
     
         // Create the chart with the new dimensions
-        console.log(whichChart)
         if (whichChart == 'file-sunburst'){
             createSunburstChart(data, width);
         }
