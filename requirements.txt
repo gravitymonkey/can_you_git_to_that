@@ -4,7 +4,7 @@ openai
 pandas
 tiktoken
 flask-socketio
-llama-index==0.10.27
+llama-index==0.12.28
 llama-index-llms-openai==0.1.27
 llama-index-embeddings-openai==0.1.7
 pathspec==0.12.1
